@@ -10,7 +10,31 @@ import json
 import requests
 import shutil
 import subprocess
-from pathlib import Path
+import ctypes
+
+
+def is_admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
+
+def run_as_admin():
+    if is_admin():
+        return True
+    else:
+        try:
+            args = " ".join([f'"{arg}"' for arg in sys.argv])
+
+
+            ctypes.windll.shell32.ShellExecuteW(
+                None, "runas", sys.executable, args, None, 1
+            )
+            return False
+        except Exception as e:
+            print(f"Failed to request admin privileges: {e}")
+            return False
 
 
 def log_message(message):
@@ -229,15 +253,40 @@ def cleanup_temp_files(app_dir):
 
 
 def main():
-    if len(sys.argv) < 3:
-        log_message("Error: Insufficient arguments")
-        log_message("Usage: updater.exe <download_url> <new_version> [patch_notes]")
+    if not run_as_admin():
+        log_message("Requesting administrator privileges...")
+        sys.exit(0)
+
+    if is_admin():
+        log_message("Running with administrator privileges - CONFIRMED")
+    else:
+        log_message("WARNING: Still not running as administrator!")
+
+    log_message(f"Total arguments: {len(sys.argv)}")
+    for i, arg in enumerate(sys.argv):
+        log_message(f"sys.argv[{i}]: {arg}")
+
+    download_url = None
+    new_version = None
+    patch_notes = "Update completed successfully!"
+
+    for i, arg in enumerate(sys.argv[1:], 1):  # Skip argv[0]
+        if "github.com" in arg and arg.endswith(".exe"):
+            download_url = arg
+            if i + 1 < len(sys.argv):
+                new_version = sys.argv[i + 1]
+            if i + 2 < len(sys.argv):
+                patch_notes = " ".join(sys.argv[i + 2:])
+            break
+
+    if not download_url or not new_version:
+        log_message("Error: Could not parse arguments correctly")
+        log_message("Expected: updater.exe <download_url> <version> [patch_notes]")
         input("Press Enter to exit...")
         sys.exit(1)
 
-    download_url = sys.argv[1]
-    new_version = sys.argv[2]
-    patch_notes = sys.argv[3] if len(sys.argv) > 3 else "Update completed successfully!"
+    # Remove quotes from patch notes if present
+    patch_notes = patch_notes.strip('"')
 
     try:
         patch_notes = json.loads(patch_notes)
@@ -253,16 +302,22 @@ def main():
     # Setup paths
     app_dir = get_app_directory()
     current_exe_path = os.path.join(app_dir, "Vault.exe")
-    temp_exe_path = os.path.join(app_dir, f"TheVault_v{new_version}_temp.exe")
+
+    # Use system temp directory for downloading
+    import tempfile
+    temp_dir = tempfile.gettempdir()
+    temp_exe_path = os.path.join(temp_dir, f"TheVault_v{new_version}_temp.exe")
+
     backup_exe_path = os.path.join(app_dir, "TheVault_backup.exe")
 
     log_message(f"App directory: {app_dir}")
     log_message(f"Current executable: {current_exe_path}")
+    log_message(f"Temp download path: {temp_exe_path}")
 
     # Verify current executable exists
     if not os.path.exists(current_exe_path):
-        log_message(f"Error: TheVault.exe not found at {current_exe_path}")
-        log_message("Please ensure the updater is in the same directory as TheVault.exe")
+        log_message(f"Error: Vault.exe not found at {current_exe_path}")
+        log_message("Please ensure the updater is in the same directory as Vault.exe")
         input("Press Enter to exit...")
         sys.exit(1)
 
@@ -306,6 +361,13 @@ def main():
     finally:
         # Cleanup temporary files
         cleanup_temp_files(app_dir)
+        # Also cleanup temp download file
+        try:
+            if os.path.exists(temp_exe_path):
+                os.remove(temp_exe_path)
+                log_message(f"Cleaned up temp download: {temp_exe_path}")
+        except:
+            pass
 
     # Keep console open briefly to show final status
     if success:
@@ -317,7 +379,6 @@ def main():
         log_message("Check updater.log for details.")
         log_message("Press Enter to exit...")
         input()
-
 
 if __name__ == "__main__":
     main()

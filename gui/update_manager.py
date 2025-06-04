@@ -7,7 +7,7 @@ import os
 from packaging import version
 
 # Version management
-CURRENT_VERSION = "1.0.1"  # Update with each release
+CURRENT_VERSION = "1.0.0"  # Update with each release
 VERSION_FILE = "version.txt"
 GITHUB_API_URL = "https://api.github.com/repos/AlexBenkarski/TheVault/releases/latest"
 
@@ -61,7 +61,9 @@ def check_for_updates():
                 # Find the .exe asset in the release
                 exe_asset = None
                 for asset in release_data['assets']:
-                    if asset['name'].endswith('.exe') and 'TheVault' in asset['name'] and 'Setup' not in asset['name']:
+
+                    if asset['name'] == 'Vault.exe' or (
+                            asset['name'].endswith('.exe') and 'Setup' not in asset['name']):
                         exe_asset = asset
                         break
 
@@ -129,41 +131,11 @@ def show_update_popup(update_info):
         with dpg.group(horizontal=True):
             dpg.add_button(label="Update Now",
                            callback=lambda: start_update_process(update_info),
-                           width=120)
-            dpg.add_spacer(width=20)
+                           width=150)
+            dpg.add_spacer(width=40)
             dpg.add_button(label="Remind Me Later",
                            callback=lambda: dpg.delete_item("update_popup"),
-                           width=120)
-            dpg.add_spacer(width=20)
-            dpg.add_button(label="Skip This Version",
-                           callback=lambda: skip_version(update_info['version']),
-                           width=120)
-
-
-def skip_version(version_to_skip):
-    try:
-        app_dir = get_app_directory()
-        skip_file = os.path.join(app_dir, "skip_version.txt")
-        with open(skip_file, 'w') as f:
-            f.write(version_to_skip)
-        print(f"Skipping version {version_to_skip}")
-    except Exception as e:
-        print(f"Failed to save skip version: {e}")
-
-    dpg.delete_item("update_popup")
-
-
-def should_skip_version(version_to_check):
-    try:
-        app_dir = get_app_directory()
-        skip_file = os.path.join(app_dir, "skip_version.txt")
-        if os.path.exists(skip_file):
-            with open(skip_file, 'r') as f:
-                skipped_version = f.read().strip()
-                return skipped_version == version_to_check
-    except:
-        pass
-    return False
+                           width=150)
 
 
 def start_update_process(update_info):
@@ -203,7 +175,7 @@ def start_update_process(update_info):
                 print(f"Updater started with PID: {process.pid}")
 
                 # Give updater a moment to start, then close main app
-                dpg.set_frame_callback(30, lambda: dpg.stop_dearpygui())
+                dpg.stop_dearpygui()
 
             except Exception as e:
                 raise Exception(f"Failed to start updater process: {str(e)}")
