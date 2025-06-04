@@ -42,24 +42,6 @@ pyinstaller --onefile main.py --name TheVault
 
 # Build updater
 pyinstaller --onefile updater.py
-
-# Files will be created in the dist/ folder
-🔧 Development
-Project Structure
-TheVault/
-├── main.py                 # Application entry point
-├── updater.py             # Auto-updater executable
-├── config.py              # Configuration management
-├── gui/
-│   ├── main_gui.py        # Main GUI controller
-│   ├── update_manager.py  # Update system
-│   └── views/             # GUI views
-├── core/
-│   └── vault_manager.py   # Core vault functionality
-├── assets/                # Images and resources
-└── installer/
-    └── setup.iss          # Inno Setup installer script
-
     
 Requirements
 
