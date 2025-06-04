@@ -4,7 +4,8 @@ import os
 from config import AUTH_PATH, get_asset_path
 import gui.views.login_view as login_view
 import gui.views.signup_view as signup_view
-from gui.update_manager import check_post_update_launch, show_update_popup, check_for_updates
+from gui.update_manager import check_post_update_launch, show_update_popup, check_for_updates, get_window_title
+
 
 
 def cleanup_existing_items():
@@ -42,7 +43,7 @@ def run_gui():
 
     dpg.set_primary_window("MainWindow", True)
     dpg.create_viewport(
-        title="The Vault",
+        title=get_window_title(),
         width=1200,
         height=800,
         resizable=False

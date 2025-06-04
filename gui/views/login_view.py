@@ -1,7 +1,8 @@
 from dearpygui import dearpygui as dpg
 from core.vault_manager import user_verification
-from gui.helpers.view_manager import set_view
 from gui.views.recovery_view import show_recovery_view
+from gui.helpers.view_manager import set_view
+
 
 
 def show_login_view():
@@ -38,6 +39,7 @@ def show_login_view():
             dpg.add_button(label="Forgot Password?", width=120, callback=lambda: set_view(show_recovery_view))
             dpg.add_spacer(width=2)
             dpg.add_button(label="Log In", width=60, callback=lambda: try_login())
+
 
 
 def try_login():

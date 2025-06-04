@@ -2,10 +2,9 @@ import os
 import tkinter as tk
 from tkinter import filedialog
 from dearpygui import dearpygui as dpg
-
 from core.vault_manager import is_password_strong
-from gui.helpers.view_manager import set_view
 from gui.views import login_view
+from gui.helpers.view_manager import set_view
 
 
 def get_default_vault_path():
@@ -133,7 +132,6 @@ def show_signup_view():
                 label="Submit",
                 callback=lambda: try_account_creation()
             )
-
 
 def validate_password_strength_signup():
     password = dpg.get_value("input_password")

@@ -252,7 +252,7 @@ def main():
 
     # Setup paths
     app_dir = get_app_directory()
-    current_exe_path = os.path.join(app_dir, "TheVault.exe")
+    current_exe_path = os.path.join(app_dir, "Vault.exe")
     temp_exe_path = os.path.join(app_dir, f"TheVault_v{new_version}_temp.exe")
     backup_exe_path = os.path.join(app_dir, "TheVault_backup.exe")
 
