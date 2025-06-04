@@ -10,11 +10,12 @@ VAULT_PATH = None
 
 
 def get_asset_path(filename):
-    try:
+    if getattr(sys, 'frozen', False):
         base_path = sys._MEIPASS
-    except Exception:
+    else:
         base_path = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(base_path, "assets", filename)
+
+    return os.path.join(base_path, 'assets', filename)
 
 
 def save_vault_directory(vault_directory):

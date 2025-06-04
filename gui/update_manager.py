@@ -7,9 +7,14 @@ import os
 from packaging import version
 
 # Version management
-CURRENT_VERSION = "1.0.0"  # Update with each release
+CURRENT_VERSION = "1.0.1"  # Update with each release
 VERSION_FILE = "version.txt"
 GITHUB_API_URL = "https://api.github.com/repos/AlexBenkarski/TheVault/releases/latest"
+
+def get_window_title():
+    """Get window title with version"""
+    current_version = get_current_version()  # You'll need to move this from update_manager.py
+    return f"The Vault v{current_version}"
 
 
 def get_app_directory():
