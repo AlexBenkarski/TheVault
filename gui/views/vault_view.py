@@ -9,6 +9,26 @@ _vault_data = {}
 _vault_key = None
 
 
+def process_user_schema(user_fields):
+    if isinstance(user_fields, str):
+        fields = [field.strip() for field in user_fields.split(',')]
+    else:
+        fields = list(user_fields)
+
+    fields = [field.strip() for field in fields if field.strip()]
+
+    title_fields = ['title', 'name', 'label']
+    has_title_field = any(field.lower() in title_fields for field in fields)
+
+    if not has_title_field:
+        final_schema = ["Title"] + fields
+    else:
+        final_schema = fields
+
+    return final_schema
+
+
+
 def load_folder(sender, app_data, user_data):
     global _selected_folder
     folder_name = user_data
@@ -18,6 +38,33 @@ def load_folder(sender, app_data, user_data):
         redraw_vault()
     else:
         print(f"Error: Folder {folder_name} not found in vault data")
+
+
+def get_entry_display_name(entry, schema):
+    title_fields = ['title', 'name', 'label']
+
+    for title_field in title_fields:
+        for field_name in entry.keys():
+            if field_name.lower() == title_field and entry[field_name] and str(entry[field_name]).strip():
+                return str(entry[field_name]).strip()
+
+    fallback_fields = ['site', 'website', 'service', 'account', 'app']
+    for field in fallback_fields:
+        if field in entry and entry[field] and str(entry[field]).strip():
+            return str(entry[field]).strip()
+
+    for field in schema:
+        if field in entry and entry[field] and str(entry[field]).strip():
+            value = str(entry[field]).strip()
+
+            if field.lower() == "password":
+                return "Password Entry"
+
+            if '@' in value and field.lower() in ['email', 'username']:
+                return value.split('@')[0]
+            return value[:25] + "..." if len(value) > 25 else value
+
+    return "Unnamed Entry"
 
 
 def redraw_vault():
@@ -93,94 +140,109 @@ def redraw_vault():
 
                 dpg.add_spacer(height=10)
 
-                # Entry Table
-                with dpg.table(header_row=True,
-                               policy=dpg.mvTable_SizingFixedFit,
-                               borders_innerH=True,
-                               borders_outerH=True,
-                               borders_innerV=True,
-                               borders_outerV=True,
-                               row_background=True):
+                schema = folder_data.get("schema", ["Website", "Username", "Password"])
+                entries = folder_data.get("entries", [])
 
-                    # First add all columns with fixed width
-                    schema = folder_data.get("schema", ["Website", "Username", "Password"])
+                if entries:
+                    dpg.add_text("Entries:", color=(180, 180, 180))
+                    dpg.add_spacer(height=5)
 
-                    # Calculate width for each field column
-                    field_width = 200  # Base width for field columns
+                    # Container for all entries
+                    with dpg.child_window(height=400, width=-1, border=True):
+                        for entry_idx, entry in enumerate(entries):
+                            display_name = get_entry_display_name(entry, schema)
 
-                    # Add regular columns with fixed width
-                    for field in schema:
-                        dpg.add_table_column(
-                            label=field,
-                            width=field_width,
-                            init_width_or_weight=field_width
-                        )
+                            with dpg.collapsing_header(
+                                    label=f"{display_name}",
+                                    default_open=False,
+                                    tag=f"entry_header_{entry_idx}"
+                            ):
+                                with dpg.group():
+                                    dpg.add_spacer(height=5)
 
-                    # Add actions column with fixed width
-                    actions_width = 150
-                    dpg.add_table_column(
-                        label="Actions",
-                        width=actions_width,
-                        init_width_or_weight=actions_width
-                    )
+                                    # Create field rows
+                                    for field in schema:
+                                        field_value = entry.get(field, "")
+                                        if field_value:
+                                            if field.lower() == 'title':
+                                                continue
 
-                    # Add entries
-                    entries = folder_data.get("entries", [])
-                    for entry_idx, entry in enumerate(entries):
-                        with dpg.table_row():
-                            for field in schema:
-                                with dpg.table_cell():
+                                            with dpg.group(horizontal=True):
+                                                dpg.add_text(f"{field}:", color=(200, 200, 200))
+                                                dpg.add_spacer(width=10)
+
+                                                # Field value group
+                                                with dpg.group(horizontal=True):
+                                                    if field.lower() == "password":
+                                                        # Password field with show/hide
+                                                        dpg.add_text("********",
+                                                                     tag=f"hidden_pwd_{entry_idx}_{field}",
+                                                                     color=(150, 150, 150))
+                                                        dpg.add_text(field_value,
+                                                                     tag=f"visible_pwd_{entry_idx}_{field}",
+                                                                     show=False)
+                                                        dpg.add_spacer(width=10)
+                                                        # Copy button first, then Show button for passwords
+                                                        dpg.add_button(
+                                                            label="Copy",
+                                                            callback=copy_to_clipboard,
+                                                            user_data=(field_value, field),
+                                                            width=50,
+                                                            height=25
+                                                        )
+                                                        dpg.add_spacer(width=5)
+                                                        dpg.add_button(
+                                                            label="Show",
+                                                            callback=toggle_password_visibility,
+                                                            user_data=(entry_idx, field, field_value),
+                                                            width=50,
+                                                            height=25,
+                                                            tag=f"toggle_btn_{entry_idx}_{field}"
+                                                        )
+                                                    else:
+
+                                                        dpg.add_text(field_value, wrap=400)
+                                                        dpg.add_spacer(width=10)
+                                                        dpg.add_button(
+                                                            label="Copy",
+                                                            callback=copy_to_clipboard,
+                                                            user_data=(field_value, field),
+                                                            width=50,
+                                                            height=25
+                                                        )
+
+                                            dpg.add_spacer(height=3)
+
+                                    # Entry actions
+                                    dpg.add_separator()
+                                    dpg.add_spacer(height=5)
                                     with dpg.group(horizontal=True):
-                                        # Create a group for the text and buttons
-                                        with dpg.group(horizontal=True,
-                                                       width=field_width - 90):
-                                            if field.lower() == "password":
-                                                dpg.add_text("********", tag=f"hidden_pwd_{entry_idx}_{field}")
-                                                dpg.add_text(entry.get(field, ""),
-                                                             tag=f"visible_pwd_{entry_idx}_{field}",
-                                                             show=False)
-                                            else:
-                                                dpg.add_text(entry.get(field, ""))
-
-                                        # Show/Hide button for passwords
-                                        if field.lower() == "password":
-                                            dpg.add_button(
-                                                label="Show",
-                                                callback=toggle_password_visibility,
-                                                user_data=(entry_idx, field, entry.get(field, "")),
-                                                width=35,
-                                                tag=f"toggle_btn_{entry_idx}_{field}"
-                                            )
-
+                                        dpg.add_text("Actions:", color=(180, 180, 180))
+                                        dpg.add_spacer(width=20)
                                         dpg.add_button(
-                                            label="Copy",
-                                            callback=copy_to_clipboard,
-                                            user_data=(entry.get(field, ""), field),
-                                            width=35
+                                            label="Edit Entry",
+                                            callback=edit_entry_callback,
+                                            user_data=(entry_idx, entry),
+                                            width=100,
+                                            height=25
                                         )
+                                        dpg.add_spacer(width=10)
+                                        dpg.add_button(
+                                            label="Delete Entry",
+                                            callback=delete_entry_callback,
+                                            user_data=(entry_idx, entry),
+                                            width=100,
+                                            height=25
+                                        )
+                                    dpg.add_spacer(height=10)
 
-                            # Actions column
-                            with dpg.table_cell():
-                                with dpg.group(horizontal=True):
-                                    dpg.add_button(
-                                        label="Edit",
-                                        callback=edit_entry_callback,
-                                        user_data=(entry_idx, entry),
-                                        width=60
-                                    )
-                                    dpg.add_spacer(width=5)
-                                    dpg.add_button(
-                                        label="X",
-                                        callback=delete_entry_callback,
-                                        user_data=(entry_idx, entry),
-                                        width=60
-                                    )
 
-                dpg.add_spacer(height=20)
-                dpg.add_button(label="Add New Entry", width=200, callback=add_entry_callback)
+                            dpg.add_spacer(height=5)
+
+                dpg.add_spacer(height=10)
+                dpg.add_button(label="+ Add New Entry", width=200, callback=add_entry_callback)
         else:
             dpg.add_text("No folder selected.", color=(150, 150, 150))
-
 
 def show_vault_view(key, user):
     global _vault_data, _selected_folder, _vault_key
@@ -463,9 +525,13 @@ def add_folder_callback():
         dpg.add_spacer(height=5)
 
         dpg.add_input_text(label="",
-                           hint="Enter Fields",
+                           hint="Enter fields (e.g. username, password, email)",
                            tag="new_folder_fields",
                            width=200)
+
+        # ADD THIS: Info text about Title field
+        dpg.add_text("Note: A 'Title' field will be automatically added if not included",
+                     color=(150, 150, 150), wrap=350)
 
         dpg.add_text("", tag="create_folder_error", color=(255, 0, 0))
         dpg.add_spacer(height=5)
@@ -483,8 +549,11 @@ def add_folder_callback():
                 dpg.set_value("create_folder_error", "A folder with this name already exists")
                 return
 
-            # Create the folder
-            add_folder(_vault_key, new_folder_name, new_folder_fields)
+            # REPLACE THIS SECTION: Process the user's fields to include Title
+            processed_schema = process_user_schema(new_folder_fields)
+
+            # Create the folder with processed schema
+            add_folder(_vault_key, new_folder_name, processed_schema)
 
             # Reload vault data
             _vault_data["data"] = load_vault(_vault_key)
@@ -751,12 +820,4 @@ def toggle_password_visibility(sender, app_data, user_data):
             dpg.configure_item(visible_tag, show=False)
             dpg.configure_item(button_tag, label="Show")
 
-
-def copy_password_callback(entry):
-    try:
-        import pyperclip
-        if "Password" in entry:
-            pyperclip.copy(entry["Password"])
-    except ImportError:
-        print("Error: pyperclip module not found.")
 

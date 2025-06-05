@@ -8,9 +8,25 @@ from gui.helpers.view_manager import set_view
 
 
 def get_default_vault_path():
-    user_home = os.path.expanduser("~")
-    default_path = os.path.join(user_home, "OneDrive", "TheVault")
-    return default_path
+    from config import is_dev_environment
+
+    if is_dev_environment():
+        # DEV: Use project dev folder
+
+        current_file = os.path.abspath(__file__)
+        views_dir = os.path.dirname(current_file)
+        gui_dir = os.path.dirname(views_dir)
+        project_root = os.path.dirname(gui_dir)
+
+        dev_vault_dir = os.path.join(project_root, "dev_vault_data")
+        if not os.path.exists(dev_vault_dir):
+            os.makedirs(dev_vault_dir, exist_ok=True)
+        return dev_vault_dir
+    else:
+        # PRODUCTION: OneDrive logic
+        user_home = os.path.expanduser("~")
+        default_path = os.path.join(user_home, "OneDrive", "TheVault")
+        return default_path
 
 
 def browse_for_directory():
@@ -47,16 +63,15 @@ def show_signup_view():
         dpg.add_spacer(height=5)
 
         with dpg.group(horizontal=True):
-            dpg.add_spacer(width=400)
+            dpg.add_spacer(width=420)
             dpg.add_image("logo_texture", width=300, height=300)
 
-        dpg.add_spacer(height=5)
 
         with dpg.group(horizontal=True):
             dpg.add_spacer(width=540)
             dpg.add_text("Sign Up", color=(255, 255, 255))
 
-        dpg.add_spacer(height=15)
+        dpg.add_spacer(height=5)
 
 
         with dpg.group(horizontal=True):
@@ -68,7 +83,7 @@ def show_signup_view():
             dpg.add_spacer(width=455)
             dpg.add_input_text(hint="Username", label="", width=250, tag="input_username")
 
-        dpg.add_spacer(height=15)
+        dpg.add_spacer(height=5)
 
 
         with dpg.group(horizontal=True):
@@ -82,10 +97,10 @@ def show_signup_view():
                 callback=validate_password_strength_signup
             )
 
-        dpg.add_spacer(height=15)
+        dpg.add_spacer(height=5)
 
         # Password requirements positioned next to password field
-        with dpg.child_window(width=250, height=140, pos=[725, 400], no_scrollbar=True, border=False):
+        with dpg.child_window(width=250, height=128, pos=[735, 373], no_scrollbar=True, border=False):
             dpg.add_text("Password Requirements:", color=(200, 200, 200))
             dpg.add_text("At least 8 characters", tag="signup_req_length", color=(150, 150, 150))
             dpg.add_text("One uppercase letter", tag="signup_req_upper", color=(150, 150, 150))
@@ -97,18 +112,15 @@ def show_signup_view():
             dpg.add_input_text(hint="Confirm Password", label="", width=250, password=True,
                                tag="input_confirm_password", callback=validate_password_match_signup)
 
-        dpg.add_spacer(height=20)
-
-
-        with dpg.group(horizontal=True):
-            dpg.add_spacer(width=530)
-            dpg.add_text("Storage Location:")
-
         dpg.add_spacer(height=5)
 
 
         with dpg.group(horizontal=True):
-            dpg.add_spacer(width=415)
+            dpg.add_spacer(width=455)
+            dpg.add_text("Storage Location:")
+
+        with dpg.group(horizontal=True):
+            dpg.add_spacer(width=455)
             dpg.add_input_text(
                 default_value=default_path,
                 width=250,
@@ -120,18 +132,20 @@ def show_signup_view():
 
         dpg.add_input_text(default_value=default_path, show=False, tag="selected_vault_directory")
 
-        dpg.add_spacer(height=15)
-
-
-        dpg.add_spacer(height=0, tag="error_spacer")
-
+        dpg.add_spacer(height=5)
 
         with dpg.group(horizontal=True):
-            dpg.add_spacer(width=542)
+            dpg.add_spacer(width=455)
             dpg.add_button(
-                label="Submit",
+                label="Create Account",
                 callback=lambda: try_account_creation()
             )
+
+        dpg.add_spacer(height=5)
+
+        with dpg.group(horizontal=True):
+            dpg.add_spacer(width=450, tag="error_spacer")
+
 
 def validate_password_strength_signup():
     password = dpg.get_value("input_password")

@@ -2,8 +2,44 @@ import json
 import os
 import sys
 
-# Config file path - stored in user's AppData directory (Windows standard)
-CONFIG_FILE = os.path.join(os.path.expanduser("~"), "AppData", "Local", "TheVault", "config.json")
+
+def is_dev_environment():
+    return not hasattr(sys, '_MEIPASS')
+
+
+def get_config_file_path():
+    if is_dev_environment():
+        # DEV: Store config in project directory
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(project_root, "dev_config.json")
+    else:
+        # PRODUCTION: Use existing AppData location
+        return os.path.join(os.path.expanduser("~"), "AppData", "Local", "TheVault", "config.json")
+
+
+def get_default_vault_directory():
+    if is_dev_environment():
+        # DEV: Use project subdirectory
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        dev_vault_dir = os.path.join(project_root, "dev_vault_data")
+        # Ensure dev directory exists
+        if not os.path.exists(dev_vault_dir):
+            os.makedirs(dev_vault_dir, exist_ok=True)
+        return dev_vault_dir
+    else:
+        # PRODUCTION: Return None to let user choose (existing behavior)
+        return None
+
+
+def get_window_title():
+    if is_dev_environment():
+        return "TheVault (Development)"
+    else:
+        return "TheVault"
+
+
+# Dynamic config file path based on environment
+CONFIG_FILE = get_config_file_path()
 
 AUTH_PATH = None
 VAULT_PATH = None
@@ -34,6 +70,8 @@ def save_vault_directory(vault_directory):
             config = {}
 
     config['vault_directory'] = vault_directory
+    # Store environment info for debugging
+    config['is_dev_environment'] = is_dev_environment()
 
     try:
         with open(CONFIG_FILE, 'w') as f:
@@ -52,13 +90,19 @@ def get_vault_directory():
             return config.get('vault_directory')
         except Exception as e:
             print(f"Error reading config: {e}")
-    return None
+
+    # If no config exists, return default for dev environment
+    return get_default_vault_directory()
 
 
 def get_current_auth_path():
     vault_dir = get_vault_directory()
     if vault_dir:
-        return os.path.join(vault_dir, "auth", "credentials.enc")
+        auth_dir = os.path.join(vault_dir, "auth")
+        # Ensure auth directory exists
+        if not os.path.exists(auth_dir):
+            os.makedirs(auth_dir, exist_ok=True)
+        return os.path.join(auth_dir, "credentials.enc")
     return None
 
 
@@ -99,4 +143,19 @@ def get_vault_path():
     return current_path if current_path else VAULT_PATH
 
 
+def print_environment_info():
+    print(f"Development Environment: {is_dev_environment()}")
+    print(f"Config File: {CONFIG_FILE}")
+    print(f"Vault Directory: {get_vault_directory()}")
+    print(f"Window Title: {get_window_title()}")
+
+
+# Initialize paths on import
 initialize_paths()
+
+# Auto-create dev environment on first run
+if is_dev_environment():
+    vault_dir = get_vault_directory()
+    if vault_dir and not os.path.exists(CONFIG_FILE):
+        # First time dev setup - save the default dev directory
+        save_vault_directory(vault_dir)

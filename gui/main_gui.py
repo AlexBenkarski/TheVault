@@ -7,21 +7,6 @@ import gui.views.signup_view as signup_view
 from gui.update_manager import check_post_update_launch, show_update_popup, check_for_updates, get_window_title
 
 
-
-def cleanup_existing_items():
-    items_to_cleanup = [
-        "MainWindow", "SignupWindow", "LoginWindow", "RecoveryView",
-        "input_username", "input_password", "input_confirm_password",
-        "recovery_key", "new_password", "confirm_password",
-        "logo_texture"
-    ]
-
-    for item in items_to_cleanup:
-        if dpg.does_item_exist(item):
-            dpg.delete_item(item)
-
-
-
 def run_gui():
     try:
         dpg.destroy_context()

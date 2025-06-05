@@ -49,5 +49,6 @@ user_data/
 vault_data/
 
 # Development/testing
-temp_build/
-test_files/
+dev_vault_data/
+dev_config.json
+CHEATSHEET.md

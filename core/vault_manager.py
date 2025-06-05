@@ -248,7 +248,11 @@ def add_folder(key: bytes, new_folder_name, new_folder_fields):
         return
 
     else:
-        schema = [field.strip() for field in new_folder_fields.split(",")]
+        # Handle both string and list inputs
+        if isinstance(new_folder_fields, list):
+            schema = new_folder_fields
+        else:
+            schema = [field.strip() for field in new_folder_fields.split(",")]
 
         data[new_folder_name] = {
             "schema": schema,
@@ -256,4 +260,3 @@ def add_folder(key: bytes, new_folder_name, new_folder_fields):
         }
 
         save_vault(data, key)
-

@@ -5,16 +5,20 @@ import subprocess
 import sys
 import os
 from packaging import version
+from config import is_dev_environment
 
 # Version management
-CURRENT_VERSION = "1.0.0"  # Update with each release
+CURRENT_VERSION = "1.0.1"  # Update with each release
 VERSION_FILE = "version.txt"
 GITHUB_API_URL = "https://api.github.com/repos/AlexBenkarski/TheVault/releases/latest"
 
 def get_window_title():
-    """Get window title with version"""
-    current_version = get_current_version()  # You'll need to move this from update_manager.py
-    return f"The Vault v{current_version}"
+    current_version = get_current_version()
+
+    if is_dev_environment():
+        return f"Vault DEVELOPMENT v{current_version}"
+    else:
+        return f"The Vault v{current_version}"
 
 
 def get_app_directory():
@@ -282,18 +286,3 @@ def check_post_update_launch():
 
     except Exception as e:
         print(f"Post-update check failed: {e}")
-
-
-def check_for_updates_with_ui():
-    update_info = check_for_updates()
-
-    if update_info['available']:
-        # Check if this version should be skipped
-        if should_skip_version(update_info['version']):
-            print(f"Skipping version {update_info['version']} as requested")
-            return update_info
-
-        print("Update available - will show popup")
-        return update_info
-
-    return update_info
