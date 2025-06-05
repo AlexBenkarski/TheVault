@@ -293,6 +293,10 @@ def confirm_delete():
 
 
 def show_user_menu():
+    #Check if modal already exists before creating.
+    if dpg.does_item_exist("user_menu_modal"):
+        dpg.delete_item("user_menu_modal")
+
     # Create a popup window for user menu
     with dpg.window(label="User Menu", modal=True, show=True, tag="user_menu_modal",
                     width=200, height=120, pos=[600, 100]):
