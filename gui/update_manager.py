@@ -98,7 +98,7 @@ def check_for_updates():
 
 def show_update_popup(update_info):
     with dpg.window(label="Update Available", modal=True, tag="update_popup",
-                    width=500, height=450, pos=[350, 175]):
+                    width=650, height=500, pos=[275, 150]):
 
         dpg.add_text(f"Version {update_info['version']} is available!",
                      color=(100, 255, 100))
@@ -108,26 +108,22 @@ def show_update_popup(update_info):
         dpg.add_text(f"Latest version: {update_info['version']}")
         dpg.add_spacer(height=15)
 
-        # Patch notes section
         dpg.add_text("What's New:", color=(255, 255, 100))
         dpg.add_separator()
 
-        # Create scrollable area for patch notes
-        with dpg.child_window(height=220, border=True):
-            # Split patch notes into lines and display
+        with dpg.child_window(height=270, border=True):
             patch_lines = update_info['patch_notes'].split('\n')
             for line in patch_lines:
                 line = line.strip()
                 if line:
-                    # Handle markdown-style formatting
                     if line.startswith('# '):
-                        dpg.add_text(line[2:], color=(255, 255, 100))
+                        dpg.add_text(line[2:], color=(255, 255, 100), wrap=610)
                     elif line.startswith('## '):
-                        dpg.add_text(line[3:], color=(200, 200, 100))
+                        dpg.add_text(line[3:], color=(200, 200, 100), wrap=610)
                     elif line.startswith('- '):
-                        dpg.add_text(f"  • {line[2:]}")
+                        dpg.add_text(f"  • {line[2:]}", wrap=590)
                     else:
-                        dpg.add_text(line)
+                        dpg.add_text(line, wrap=610)
 
         dpg.add_spacer(height=15)
 
@@ -144,10 +140,8 @@ def show_update_popup(update_info):
 
 def start_update_process(update_info):
     try:
-        # Close update popup
         dpg.delete_item("update_popup")
 
-        # Show updating popup
         with dpg.window(label="Updating...", modal=True, tag="updating_popup",
                         width=350, height=180, pos=[425, 310], no_close=True):
             dpg.add_text("Downloading update...", color=(100, 255, 100))
@@ -215,7 +209,7 @@ def show_error_popup(message):
 
 def show_post_update_popup(patch_notes):
     with dpg.window(label="Update Complete!", modal=True, tag="post_update_popup",
-                    width=500, height=450, pos=[350, 175]):
+                    width=650, height=500, pos=[275, 150]):
 
         dpg.add_text("The Vault has been updated successfully!",
                      color=(100, 255, 100))
@@ -224,21 +218,20 @@ def show_post_update_popup(patch_notes):
         dpg.add_text("What's New in This Version:", color=(255, 255, 100))
         dpg.add_separator()
 
-        # Scrollable patch notes
-        with dpg.child_window(height=280, border=True):
+        # Scrollable patch notes with wrapping
+        with dpg.child_window(height=320, border=True):
             patch_lines = patch_notes.split('\n')
             for line in patch_lines:
                 line = line.strip()
                 if line:
-                    # Handle markdown-style formatting
                     if line.startswith('# '):
-                        dpg.add_text(line[2:], color=(255, 255, 100))
+                        dpg.add_text(line[2:], color=(255, 255, 100), wrap=610)
                     elif line.startswith('## '):
-                        dpg.add_text(line[3:], color=(200, 200, 100))
+                        dpg.add_text(line[3:], color=(200, 200, 100), wrap=610)
                     elif line.startswith('- '):
-                        dpg.add_text(f"  • {line[2:]}")
+                        dpg.add_text(f"  • {line[2:]}", wrap=590)
                     else:
-                        dpg.add_text(line)
+                        dpg.add_text(line, wrap=610)
 
         dpg.add_spacer(height=15)
 
