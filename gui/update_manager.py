@@ -1,16 +1,17 @@
-import dearpygui.dearpygui as dpg
 import requests
 import json
 import subprocess
 import sys
 import os
+import webbrowser
 from packaging import version
 from config import is_dev_environment
 
 # Version management
-CURRENT_VERSION = "1.0.1"  # Update with each release
+CURRENT_VERSION = "2.0.0"  # Update with each release
 VERSION_FILE = "version.txt"
 GITHUB_API_URL = "https://api.github.com/repos/AlexBenkarski/TheVault/releases/latest"
+
 
 def get_window_title():
     current_version = get_current_version()
@@ -96,62 +97,159 @@ def check_for_updates():
     return {'available': False}
 
 
-def show_update_popup(update_info):
-    with dpg.window(label="Update Available", modal=True, tag="update_popup",
-                    width=650, height=500, pos=[275, 150]):
+def show_update_popup(parent, update_info):
+    """Show update available dialog using PyQt6"""
+    try:
+        from gui.widgets.modern_widgets import ModernDialog, ModernButton
+        from PyQt6.QtWidgets import QVBoxLayout, QLabel, QHBoxLayout, QScrollArea, QWidget
+        from PyQt6.QtCore import Qt
 
-        dpg.add_text(f"Version {update_info['version']} is available!",
-                     color=(100, 255, 100))
-        dpg.add_spacer(height=10)
+        # Create update dialog
+        dialog = ModernDialog(parent, "Update Available")
+        dialog.setFixedSize(600, 510)  # Increased height from 500 to 510
 
-        dpg.add_text(f"Current version: {get_current_version()}")
-        dpg.add_text(f"Latest version: {update_info['version']}")
-        dpg.add_spacer(height=15)
+        # Override dialog styling
+        dialog.setStyleSheet("""
+            QDialog {
+                background: #2d2d30;
+                border: 2px solid #4CAF50;
+                border-radius: 12px;
+            }
+            QLabel {
+                background: transparent;
+            }
+            QScrollArea {
+                background: transparent;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+            }
+        """)
 
-        dpg.add_text("What's New:", color=(255, 255, 100))
-        dpg.add_separator()
+        # Create layout
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(15)
+        layout.setContentsMargins(25, 25, 25, 25)
 
-        with dpg.child_window(height=270, border=True):
-            patch_lines = update_info['patch_notes'].split('\n')
-            for line in patch_lines:
-                line = line.strip()
-                if line:
-                    if line.startswith('# '):
-                        dpg.add_text(line[2:], color=(255, 255, 100), wrap=610)
-                    elif line.startswith('## '):
-                        dpg.add_text(line[3:], color=(200, 200, 100), wrap=610)
-                    elif line.startswith('- '):
-                        dpg.add_text(f"  • {line[2:]}", wrap=590)
-                    else:
-                        dpg.add_text(line, wrap=610)
+        # Header
+        header_label = QLabel(f"Version {update_info['version']} is available!")
+        header_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #4CAF50; background: transparent;")
+        layout.addWidget(header_label)
 
-        dpg.add_spacer(height=15)
+        layout.addSpacing(10)
+
+        # Version info
+        current_label = QLabel(f"Current version: {get_current_version()}")
+        current_label.setStyleSheet("color: #ffffff; font-size: 12px; background: transparent;")
+        layout.addWidget(current_label)
+
+        latest_label = QLabel(f"Latest version: {update_info['version']}")
+        latest_label.setStyleSheet("color: #ffffff; font-size: 12px; background: transparent;")
+        layout.addWidget(latest_label)
+
+        layout.addSpacing(15)
+
+        # What's New section
+        whats_new_label = QLabel("What's New:")
+        whats_new_label.setStyleSheet("color: #FFD700; font-size: 14px; font-weight: bold; background: transparent;")
+        layout.addWidget(whats_new_label)
+
+        # Scrollable patch notes
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFixedHeight(250)
+
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+        scroll_layout.setSpacing(5)
+        scroll_layout.setContentsMargins(15, 15, 15, 15)
+
+        # Parse patch notes
+        patch_lines = update_info['patch_notes'].split('\n')
+        for line in patch_lines:
+            line = line.strip()
+            if line:
+                if line.startswith('# '):
+                    # Main header
+                    note_label = QLabel(line[2:])
+                    note_label.setStyleSheet(
+                        "color: #FFD700; font-size: 14px; font-weight: bold; background: transparent;")
+                    note_label.setWordWrap(True)
+                elif line.startswith('## '):
+                    # Sub header
+                    note_label = QLabel(line[3:])
+                    note_label.setStyleSheet(
+                        "color: #FFA500; font-size: 13px; font-weight: bold; background: transparent;")
+                    note_label.setWordWrap(True)
+                elif line.startswith('- '):
+                    # Bullet point
+                    note_label = QLabel(f"  • {line[2:]}")
+                    note_label.setStyleSheet("color: #ffffff; font-size: 12px; background: transparent;")
+                    note_label.setWordWrap(True)
+                else:
+                    # Regular text
+                    note_label = QLabel(line)
+                    note_label.setStyleSheet("color: #ffffff; font-size: 12px; background: transparent;")
+                    note_label.setWordWrap(True)
+
+                scroll_layout.addWidget(note_label)
+
+        scroll_area.setWidget(scroll_content)
+        layout.addWidget(scroll_area)
+
+        layout.addSpacing(20)  # Increased spacing to push buttons down
 
         # Buttons
-        with dpg.group(horizontal=True):
-            dpg.add_button(label="Update Now",
-                           callback=lambda: start_update_process(update_info),
-                           width=150)
-            dpg.add_spacer(width=40)
-            dpg.add_button(label="Remind Me Later",
-                           callback=lambda: dpg.delete_item("update_popup"),
-                           width=150)
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(20)  # Reduced spacing to bring buttons closer
+
+        update_btn = ModernButton("Update Now", primary=False)
+        update_btn.setMinimumWidth(150)
+        # Add green border styling
+        update_btn.setStyleSheet("""
+            ModernButton {
+                background: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+                border: 2px solid #4CAF50;
+                border-radius: 12px;
+                padding: 12px 24px;
+                font-weight: 600;
+            }
+            ModernButton:hover {
+                background: rgba(255, 255, 255, 0.15);
+                border: 2px solid #45a049;
+            }
+            ModernButton:pressed {
+                background: rgba(255, 255, 255, 0.2);
+            }
+        """)
+        update_btn.clicked.connect(lambda: start_update_process(parent, update_info, dialog))
+
+        remind_btn = ModernButton("Remind Me Later", primary=False)
+        remind_btn.setMinimumWidth(150)
+        remind_btn.clicked.connect(dialog.reject)
+
+        # Center buttons with less space between them
+        button_layout.addStretch()
+        button_layout.addWidget(update_btn)
+        button_layout.addWidget(remind_btn)
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+
+        # Show dialog
+        dialog.exec()
+
+    except Exception as e:
+        print(f"Error showing update popup: {e}")
 
 
-def start_update_process(update_info):
+def start_update_process(parent, update_info, update_dialog):
+    """Start the update process"""
     try:
-        dpg.delete_item("update_popup")
+        # Close update dialog
+        update_dialog.accept()
 
-        with dpg.window(label="Updating...", modal=True, tag="updating_popup",
-                        width=350, height=180, pos=[425, 310], no_close=True):
-            dpg.add_text("Downloading update...", color=(100, 255, 100))
-            dpg.add_spacer(height=10)
-            dpg.add_text(f"Version: {update_info['version']}")
-            dpg.add_text(f"File: {update_info.get('asset_name', 'TheVault.exe')}")
-            dpg.add_spacer(height=10)
-            dpg.add_text("The Vault will restart automatically.", color=(255, 255, 100))
-            dpg.add_spacer(height=10)
-            dpg.add_text("Please wait...", color=(200, 200, 200))
+        # Show updating dialog
+        show_updating_popup(parent, update_info)
 
         # Find updater.exe
         app_dir = get_app_directory()
@@ -173,81 +271,255 @@ def start_update_process(update_info):
                 print(f"Updater started with PID: {process.pid}")
 
                 # Give updater a moment to start, then close main app
-                dpg.stop_dearpygui()
+                from PyQt6.QtWidgets import QApplication
+                QApplication.instance().quit()
 
             except Exception as e:
                 raise Exception(f"Failed to start updater process: {str(e)}")
         else:
             # Fallback: open browser to download manually
             print(f"Updater not found at: {updater_path}")
-            import webbrowser
             webbrowser.open(update_info['download_url'])
-            dpg.delete_item("updating_popup")
-            show_error_popup(
-                "Updater not found.\n\nThe download will open in your browser.\nPlease download and replace TheVault.exe manually.")
+            show_error_popup(parent,
+                             "Updater not found.\n\nThe download will open in your browser.\nPlease download and replace TheVault.exe manually.")
 
     except Exception as e:
         print(f"Update process failed: {str(e)}")
-        if dpg.does_item_exist("updating_popup"):
-            dpg.delete_item("updating_popup")
-        show_error_popup(f"Update failed: {str(e)}")
+        show_error_popup(parent, f"Update failed: {str(e)}")
 
 
-def show_error_popup(message):
-    with dpg.window(label="Update Error", modal=True, tag="error_popup",
-                    width=400, height=200, pos=[400, 300]):
+def show_updating_popup(parent, update_info):
+    """Show updating progress dialog"""
+    try:
+        from gui.widgets.modern_widgets import ModernDialog
+        from PyQt6.QtWidgets import QVBoxLayout, QLabel
+        from PyQt6.QtCore import Qt
 
-        # Split long messages into multiple lines
+        # Create updating dialog
+        dialog = ModernDialog(parent, "Updating...")
+        dialog.setFixedSize(400, 200)
+
+        # Override dialog styling
+        dialog.setStyleSheet("""
+            QDialog {
+                background: #2d2d30;
+                border: 2px solid #4CAF50;
+                border-radius: 12px;
+            }
+            QLabel {
+                background: transparent;
+            }
+        """)
+
+        # Create layout
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(15)
+        layout.setContentsMargins(25, 25, 25, 25)
+
+        # Status messages
+        status_label = QLabel("Downloading update...")
+        status_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #4CAF50; background: transparent;")
+        status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(status_label)
+
+        version_label = QLabel(f"Version: {update_info['version']}")
+        version_label.setStyleSheet("color: #ffffff; font-size: 12px; background: transparent;")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(version_label)
+
+        file_label = QLabel(f"File: {update_info.get('asset_name', 'TheVault.exe')}")
+        file_label.setStyleSheet("color: #ffffff; font-size: 12px; background: transparent;")
+        file_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(file_label)
+
+        restart_label = QLabel("The Vault will restart automatically.")
+        restart_label.setStyleSheet("color: #FFD700; font-size: 12px; background: transparent;")
+        restart_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(restart_label)
+
+        wait_label = QLabel("Please wait...")
+        wait_label.setStyleSheet("color: #888888; font-size: 12px; background: transparent;")
+        wait_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(wait_label)
+
+        # Show dialog (non-modal so app can close)
+        dialog.show()
+
+    except Exception as e:
+        print(f"Error showing updating popup: {e}")
+
+
+def show_error_popup(parent, message):
+    """Show error dialog"""
+    try:
+        from gui.widgets.modern_widgets import ModernDialog, ModernButton
+        from PyQt6.QtWidgets import QVBoxLayout, QLabel, QHBoxLayout
+
+        # Create error dialog
+        dialog = ModernDialog(parent, "Update Error")
+        dialog.setFixedSize(450, 250)
+
+        # Override dialog styling
+        dialog.setStyleSheet("""
+            QDialog {
+                background: #2d2d30;
+                border: 2px solid #ff4757;
+                border-radius: 12px;
+            }
+            QLabel {
+                background: transparent;
+            }
+        """)
+
+        # Create layout
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(15)
+        layout.setContentsMargins(25, 25, 25, 25)
+
+        # Error message
         lines = message.split('\n')
         for line in lines:
             if line.strip():
-                dpg.add_text(line.strip(), color=(255, 100, 100), wrap=380)
+                error_label = QLabel(line.strip())
+                error_label.setStyleSheet("color: #ff4757; font-size: 12px; background: transparent;")
+                error_label.setWordWrap(True)
+                layout.addWidget(error_label)
 
-        dpg.add_spacer(height=20)
-        dpg.add_button(label="OK", callback=lambda: dpg.delete_item("error_popup"), width=80)
+        layout.addSpacing(20)
+
+        # OK button
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        ok_btn = ModernButton("OK", primary=True)
+        ok_btn.setMinimumWidth(80)
+        ok_btn.clicked.connect(dialog.accept)
+
+        button_layout.addWidget(ok_btn)
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+
+        # Show dialog
+        dialog.exec()
+
+    except Exception as e:
+        print(f"Error showing error popup: {e}")
 
 
-def show_post_update_popup(patch_notes):
-    with dpg.window(label="Update Complete!", modal=True, tag="post_update_popup",
-                    width=650, height=500, pos=[275, 150]):
+def show_post_update_popup(parent, patch_notes):
+    """Show post-update 'what's new' dialog"""
+    try:
+        from gui.widgets.modern_widgets import ModernDialog, ModernButton
+        from PyQt6.QtWidgets import QVBoxLayout, QLabel, QHBoxLayout, QScrollArea, QWidget
 
-        dpg.add_text("The Vault has been updated successfully!",
-                     color=(100, 255, 100))
-        dpg.add_spacer(height=15)
+        # Create post-update dialog
+        dialog = ModernDialog(parent, "Update Complete!")
+        dialog.setFixedSize(600, 500)
 
-        dpg.add_text("What's New in This Version:", color=(255, 255, 100))
-        dpg.add_separator()
+        # Override dialog styling
+        dialog.setStyleSheet("""
+            QDialog {
+                background: #2d2d30;
+                border: 2px solid #4CAF50;
+                border-radius: 12px;
+            }
+            QLabel {
+                background: transparent;
+            }
+            QScrollArea {
+                background: transparent;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+            }
+        """)
 
-        # Scrollable patch notes with wrapping
-        with dpg.child_window(height=320, border=True):
-            patch_lines = patch_notes.split('\n')
-            for line in patch_lines:
-                line = line.strip()
-                if line:
-                    if line.startswith('# '):
-                        dpg.add_text(line[2:], color=(255, 255, 100), wrap=610)
-                    elif line.startswith('## '):
-                        dpg.add_text(line[3:], color=(200, 200, 100), wrap=610)
-                    elif line.startswith('- '):
-                        dpg.add_text(f"  • {line[2:]}", wrap=590)
-                    else:
-                        dpg.add_text(line, wrap=610)
+        # Create layout
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(15)
+        layout.setContentsMargins(25, 25, 25, 25)
 
-        dpg.add_spacer(height=15)
+        # Success message
+        success_label = QLabel("The Vault has been updated successfully!")
+        success_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #4CAF50; background: transparent;")
+        layout.addWidget(success_label)
 
-        with dpg.group(horizontal=True):
-            dpg.add_button(label="Continue",
-                           callback=lambda: dpg.delete_item("post_update_popup"),
-                           width=120)
-            dpg.add_spacer(width=20)
-            dpg.add_button(label="View Release on GitHub",
-                           callback=lambda: open_github_releases(),
-                           width=180)
+        layout.addSpacing(15)
+
+        # What's New section
+        whats_new_label = QLabel("What's New in This Version:")
+        whats_new_label.setStyleSheet("color: #FFD700; font-size: 14px; font-weight: bold; background: transparent;")
+        layout.addWidget(whats_new_label)
+
+        # Scrollable patch notes
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFixedHeight(280)
+
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+        scroll_layout.setSpacing(5)
+        scroll_layout.setContentsMargins(15, 15, 15, 15)
+
+        # Parse patch notes
+        patch_lines = patch_notes.split('\n')
+        for line in patch_lines:
+            line = line.strip()
+            if line:
+                if line.startswith('# '):
+                    # Main header
+                    note_label = QLabel(line[2:])
+                    note_label.setStyleSheet(
+                        "color: #FFD700; font-size: 14px; font-weight: bold; background: transparent;")
+                    note_label.setWordWrap(True)
+                elif line.startswith('## '):
+                    # Sub header
+                    note_label = QLabel(line[3:])
+                    note_label.setStyleSheet(
+                        "color: #FFA500; font-size: 13px; font-weight: bold; background: transparent;")
+                    note_label.setWordWrap(True)
+                elif line.startswith('- '):
+                    # Bullet point
+                    note_label = QLabel(f"  • {line[2:]}")
+                    note_label.setStyleSheet("color: #ffffff; font-size: 12px; background: transparent;")
+                    note_label.setWordWrap(True)
+                else:
+                    # Regular text
+                    note_label = QLabel(line)
+                    note_label.setStyleSheet("color: #ffffff; font-size: 12px; background: transparent;")
+                    note_label.setWordWrap(True)
+
+                scroll_layout.addWidget(note_label)
+
+        scroll_area.setWidget(scroll_content)
+        layout.addWidget(scroll_area)
+
+        layout.addSpacing(15)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+
+        continue_btn = ModernButton("Continue", primary=True)
+        continue_btn.setMinimumWidth(120)
+        continue_btn.clicked.connect(dialog.accept)
+
+        github_btn = ModernButton("View Release on GitHub", primary=False)
+        github_btn.setMinimumWidth(180)
+        github_btn.clicked.connect(lambda: open_github_releases())
+
+        button_layout.addWidget(continue_btn)
+        button_layout.addStretch()
+        button_layout.addWidget(github_btn)
+        layout.addLayout(button_layout)
+
+        # Show dialog
+        dialog.exec()
+
+    except Exception as e:
+        print(f"Error showing post-update popup: {e}")
 
 
 def open_github_releases():
     try:
-        import webbrowser
         # Extract repo URL from API URL
         repo_url = GITHUB_API_URL.replace('/releases/latest', '/releases').replace('api.github.com/repos/',
                                                                                    'github.com/')
@@ -256,7 +528,8 @@ def open_github_releases():
         print(f"Failed to open GitHub releases: {e}")
 
 
-def check_post_update_launch():
+def check_post_update_launch(parent):
+    """Check if this is a post-update launch and show patch notes"""
     try:
         app_dir = get_app_directory()
         temp_file = os.path.join(app_dir, "update_completed.tmp")
@@ -267,8 +540,8 @@ def check_post_update_launch():
 
             print("Post-update launch detected - will show patch notes")
 
-            # Show post-update popup after a delay to let UI load
-            dpg.set_frame_callback(90, lambda: show_post_update_popup(patch_notes))
+            # Show post-update popup
+            show_post_update_popup(parent, patch_notes)
 
             # Clean up temp file
             try:
