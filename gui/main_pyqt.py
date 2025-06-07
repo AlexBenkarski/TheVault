@@ -4,7 +4,6 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
     QLabel
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QIcon
-from gui.update_manager import get_current_version
 from gui.windows.login_window import LoginWindow
 from gui.windows.signup_window import SignupWindow
 from gui.windows.recovery_window import RecoveryWindow
@@ -297,9 +296,15 @@ class TheVaultApp(QMainWindow):
             self.signup_window.set_error_message("Username must be at least 3 characters")
             return
 
-        # Create new account
+        # Update config paths first
+        from config import update_config_paths
+        if not update_config_paths(vault_location):
+            self.signup_window.set_error_message("Failed to update configuration.")
+            return
+
+        # Create new account without vault_location (uses updated config)
         from core.vault_manager import handle_first_setup
-        success, message = handle_first_setup(username, password, vault_location)
+        success, message = handle_first_setup(username, password)
 
         if success:
             recovery_key = message
@@ -512,7 +517,7 @@ def main():
 
     # Set app properties
     app.setApplicationName("TheVault")
-    app.setApplicationVersion(get_current_version())
+    app.setApplicationVersion("2.0.0")
     app.setOrganizationName("AlexBenkarski")
 
     # Create and show main window
