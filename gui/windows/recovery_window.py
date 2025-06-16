@@ -14,12 +14,12 @@ class RecoveryWindow(QWidget):
 
     def init_ui(self):
         layout = QVBoxLayout()
-        layout.setSpacing(0)
+        layout.setSpacing(5)  # Keep this
         layout.setContentsMargins(60, 20, 60, 20)
 
-        # Title section with logo
+        # Title section
         title_layout = QVBoxLayout()
-        title_layout.setSpacing(2)
+        title_layout.setSpacing(8)
 
         logo_label = LogoWidget()
         title_layout.addWidget(logo_label)
@@ -38,7 +38,7 @@ class RecoveryWindow(QWidget):
 
         # Recovery form
         form_layout = QVBoxLayout()
-        form_layout.setSpacing(0)
+        form_layout.setSpacing(12)
 
         # Error message label
         self.error_label = QLabel("")
@@ -54,7 +54,7 @@ class RecoveryWindow(QWidget):
         instructions.setAlignment(Qt.AlignmentFlag.AlignCenter)
         instructions.setStyleSheet("color: #b0b0b0;")
         form_layout.addWidget(instructions)
-        form_layout.addSpacing(15)
+        form_layout.addSpacing(25)
 
         # Recovery key field
         recovery_label = QLabel("Recovery Key")
@@ -63,7 +63,7 @@ class RecoveryWindow(QWidget):
 
         form_layout.addWidget(recovery_label)
         form_layout.addWidget(self.recovery_input)
-        form_layout.addSpacing(20)
+        form_layout.addSpacing(30)
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -92,6 +92,8 @@ class RecoveryWindow(QWidget):
         version_label = QLabel(f"v{get_current_version()}")
         version_label.setFont(QFont("Segoe UI", 9))
         version_label.setObjectName("versionLabel")
+
+        self.recovery_input.returnPressed.connect(self.handle_recovery)
 
         version_layout.addWidget(version_label)
         layout.addLayout(version_layout)
@@ -281,6 +283,9 @@ class RecoveryWindow(QWidget):
         success, message, new_recovery_key = recover_password(recovery_key, new_password, confirm_password)
 
         if success:
+            from gui.analytics_manager import update_metric
+            update_metric("feature_usage.recovery_key_used_ever", True)
+
             dialog.accept()
             self.show_recovery_success_dialog(new_recovery_key)
         else:

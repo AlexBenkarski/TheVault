@@ -124,6 +124,9 @@ class LoginWindow(QWidget):
         version_layout.addWidget(version_label)
         layout.addLayout(version_layout)
 
+        self.username_input.returnPressed.connect(self.handle_login)
+        self.password_input.returnPressed.connect(self.handle_login)
+
         self.setLayout(layout)
 
     def handle_login(self):

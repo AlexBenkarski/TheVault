@@ -3,6 +3,8 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollA
                              QLineEdit, QTextEdit, QMessageBox, QFileDialog)
 from PyQt6.QtCore import Qt, pyqtSignal, QDateTime
 from PyQt6.QtGui import QFont
+
+from gui.update_manager import get_current_version
 from gui.widgets.modern_widgets import (ModernButton, ModernSmallButton, ModernEntryHeader,
                                         ModernEntryFrame, ModernDialog, ModernFormField, ModernLineEdit)
 
@@ -112,32 +114,44 @@ class VaultWindow(QWidget):
         # Create scroll area for folder grid
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setFixedHeight(430)
+        scroll_area.setFixedHeight(460)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setStyleSheet("""
             QScrollArea {
                 border: none;
-                background: transparent;
+                background: #2d2d30;  /* Solid color instead of transparent */
+            }
+            QScrollArea > QWidget > QWidget {
+                background: #2d2d30;  /* Target the internal content widget */
             }
             QScrollBar:vertical {
-                background: rgba(255, 255, 255, 0.1);
+                background-color: #2d2d30;  /* Use background-color instead */
                 width: 12px;
                 border-radius: 6px;
                 margin: 0px;
+                border: none;
             }
             QScrollBar::handle:vertical {
-                background: rgba(255, 255, 255, 0.3);
+                background-color: rgba(255, 255, 255, 0.2);
                 border-radius: 6px;
                 min-height: 20px;
+                border: none;
             }
             QScrollBar::handle:vertical:hover {
-                background: rgba(255, 255, 255, 0.5);
+                background-color: rgba(255, 255, 255, 0.3);
+            }
+            QScrollBar::handle:vertical:pressed {
+                background-color: rgba(255, 255, 255, 0.4);
             }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
                 border: none;
                 background: none;
                 height: 0px;
+                width: 0px;
+            }
+            QScrollBar::sub-page:vertical, QScrollBar::add-page:vertical {
+                background: #2d2d30;  /* This targets the track areas */
             }
         """)
 
@@ -190,7 +204,38 @@ class VaultWindow(QWidget):
         scroll_area.setStyleSheet("""
             QScrollArea {
                 border: none;
-                background: transparent;
+                background: #2d2d30;
+            }
+            QScrollArea > QWidget > QWidget {
+                background: #2d2d30;
+            }
+            QScrollBar:vertical {
+                background-color: #2d2d30;
+                width: 12px;
+                border-radius: 6px;
+                margin: 0px;
+                border: none;
+            }
+            QScrollBar::handle:vertical {
+                background-color: rgba(255, 255, 255, 0.2);
+                border-radius: 6px;
+                min-height: 20px;
+                border: none;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: rgba(255, 255, 255, 0.3);
+            }
+            QScrollBar::handle:vertical:pressed {
+                background-color: rgba(255, 255, 255, 0.4);
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                border: none;
+                background: none;
+                height: 0px;
+                width: 0px;
+            }
+            QScrollBar::sub-page:vertical, QScrollBar::add-page:vertical {
+                background: #2d2d30;
             }
         """)
 
@@ -219,7 +264,7 @@ class VaultWindow(QWidget):
 
         status_layout.addStretch()
 
-        version_label = QLabel("v1.0.1")
+        version_label = QLabel(get_current_version())
         version_label.setStyleSheet("color: #ffffff; font-size: 10px;")
         status_layout.addWidget(version_label)
 
@@ -233,6 +278,9 @@ class VaultWindow(QWidget):
         }
         self.vault_key = vault_key
         self.selected_folder = None
+
+        from gui.analytics_manager import update_vault_stats
+        update_vault_stats(vault_data)
 
         # Refresh the UI
         self.refresh_folders()
@@ -284,7 +332,12 @@ class VaultWindow(QWidget):
             content_height = rows_needed * 110 + 20
             self.folders_layout.parentWidget().setFixedHeight(content_height)
         else:
-            self.folders_layout.parentWidget().setMinimumHeight(4 * 110 + 20)
+            # 🔧 KEY FIX: Set minimum height for scroll area to work
+            scroll_height = rows_needed * 110 + 20  # Total content height
+            self.folders_layout.parentWidget().setMinimumHeight(scroll_height)
+
+            # Reset any fixed height constraint
+            self.folders_layout.parentWidget().setMaximumHeight(16777215)  # Qt's max
 
     def refresh_entries(self):
         # Clear existing entries
@@ -463,13 +516,18 @@ class VaultWindow(QWidget):
                     def make_toggle_password(btn, label, value):
                         def toggle():
                             if btn.text() == "Show":
-                                label.setText(value)
-                                label.setStyleSheet("color: #ffffff; font-family: monospace;")
-                                btn.setText("Hide")
+                                # Show confirmation before revealing
+                                self.show_password_confirmation(lambda: reveal_password())
                             else:
                                 label.setText("••••••••")
                                 label.setStyleSheet("color: #888888; font-family: monospace;")
                                 btn.setText("Show")
+
+                        def reveal_password():
+                            label.setText(value)
+                            label.setStyleSheet("color: #ffffff; font-family: monospace;")
+                            btn.setText("Hide")
+
                         return toggle
 
                     show_btn.clicked.connect(make_toggle_password(show_btn, value_label, field_value))
@@ -484,9 +542,9 @@ class VaultWindow(QWidget):
 
                 field_layout.addWidget(field_label)
                 field_layout.addWidget(value_label, 1)
-                field_layout.addWidget(copy_btn)
                 if show_btn:
                     field_layout.addWidget(show_btn)
+                field_layout.addWidget(copy_btn)
 
                 content_layout.addLayout(field_layout)
 
@@ -506,6 +564,8 @@ class VaultWindow(QWidget):
         action_layout.addWidget(delete_btn)
         content_layout.addLayout(action_layout)
 
+
+
         # Toggle function
         def toggle_content():
             is_visible = content_widget.isVisible()
@@ -516,22 +576,22 @@ class VaultWindow(QWidget):
             # Update frame border based on expansion
             if not is_visible:
                 entry_frame.setStyleSheet("""
-                    QFrame[entryWidget="true"] {
-                        background: rgba(255, 255, 255, 0.08);
-                        border: 2px solid #4CAF50;
-                        border-radius: 8px;
-                        margin: 2px;
-                    }
-                """)
+                   QFrame[entryWidget="true"] {
+                       background: rgba(255, 255, 255, 0.08);
+                       border: 2px solid #4CAF50;
+                       border-radius: 8px;
+                       margin: 2px;
+                   }
+               """)
             else:
                 entry_frame.setStyleSheet("""
-                    QFrame[entryWidget="true"] {
-                        background: rgba(255, 255, 255, 0.08);
-                        border: 1px solid rgba(255, 255, 255, 0.15);
-                        border-radius: 8px;
-                        margin: 2px;
-                    }
-                """)
+                   QFrame[entryWidget="true"] {
+                       background: rgba(255, 255, 255, 0.08);
+                       border: 1px solid rgba(255, 255, 255, 0.15);
+                       border-radius: 8px;
+                       margin: 2px;
+                   }
+               """)
 
         header_btn.clicked.connect(toggle_content)
 
@@ -567,10 +627,64 @@ class VaultWindow(QWidget):
 
         return "Unnamed Entry"
 
+    def show_password_confirmation(self, callback):
+        """Show confirmation dialog before revealing password"""
+        from gui.widgets.modern_widgets import ModernDialog, ModernButton
+        from PyQt6.QtWidgets import QVBoxLayout, QLabel, QHBoxLayout
+
+        dialog = ModernDialog(self, "Show Password")
+        dialog.setFixedSize(350, 180)
+
+        dialog.setStyleSheet("""
+            QDialog {
+                background: #2d2d30;
+                border: 2px solid #4CAF50;
+                border-radius: 12px;
+            }
+            QLabel {
+                background: transparent;
+            }
+        """)
+
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        # Header
+        header_label = QLabel("Show Password")
+        header_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #4CAF50; background: transparent;")
+        layout.addWidget(header_label)
+
+        # Warning message
+        warning_label = QLabel("Are you sure you want to reveal this password?")
+        warning_label.setStyleSheet("color: #ffffff; font-size: 12px; background: transparent;")
+        warning_label.setWordWrap(True)
+        layout.addWidget(warning_label)
+
+        layout.addStretch()
+
+        # Buttons
+        button_layout = QHBoxLayout()
+
+        cancel_btn = ModernButton("Cancel", primary=False)
+        cancel_btn.clicked.connect(dialog.reject)
+
+        show_btn = ModernButton("Show Password", primary=True)
+        show_btn.clicked.connect(lambda: (dialog.accept(), callback()))
+
+        button_layout.addWidget(cancel_btn)
+        button_layout.addWidget(show_btn)
+        layout.addLayout(button_layout)
+
+        dialog.exec()
+
     def copy_to_clipboard(self, text):
         from PyQt6.QtWidgets import QApplication
+        from gui.analytics_manager import increment_counter
+
         clipboard = QApplication.clipboard()
         clipboard.setText(text)
+        increment_counter("feature_usage.copy_password_clicks")
 
     def add_entry_to_folder(self):
         if not self.selected_folder:
@@ -655,6 +769,9 @@ class VaultWindow(QWidget):
             # Save to backend
             from core.vault_manager import save_vault
             save_vault(self.vault_data["data"], self.vault_key)
+
+            from gui.analytics_manager import update_vault_stats
+            update_vault_stats(self.vault_data["data"])
 
             # Refresh UI
             self.refresh_entries()
@@ -768,6 +885,9 @@ class VaultWindow(QWidget):
             from core.vault_manager import add_folder
             add_folder(self.vault_key, folder_name, folder_fields)
 
+            from gui.analytics_manager import update_vault_stats
+            update_vault_stats(self.vault_data["data"])
+
             # Reload vault data
             from core.vault_manager import load_vault
             updated_vault_data = load_vault(self.vault_key)
@@ -876,6 +996,9 @@ class VaultWindow(QWidget):
             from core.vault_manager import save_vault
             save_vault(self.vault_data["data"], self.vault_key)
 
+            from gui.analytics_manager import update_vault_stats
+            update_vault_stats(self.vault_data["data"])
+
             # Refresh UI
             self.refresh_entries()
             dialog.accept()
@@ -933,6 +1056,9 @@ class VaultWindow(QWidget):
             # Save to backend
             from core.vault_manager import save_vault
             save_vault(self.vault_data["data"], self.vault_key)
+
+            from gui.analytics_manager import update_vault_stats
+            update_vault_stats(self.vault_data["data"])
 
             # Refresh UI
             self.refresh_entries()
@@ -1144,6 +1270,9 @@ class VaultWindow(QWidget):
             from core.vault_manager import save_vault
             save_vault(self.vault_data["data"], self.vault_key)
 
+            from gui.analytics_manager import update_vault_stats
+            update_vault_stats(self.vault_data["data"])
+
             # Reset selection and refresh UI
             self.selected_folder = None
             self.refresh_folders()
@@ -1163,143 +1292,267 @@ class VaultWindow(QWidget):
         profile_button.clicked.connect(self.show_settings_dialog)
 
     def show_settings_dialog(self):
-        dialog = ModernDialog(self, "Settings")
-        dialog.setFixedSize(450, 320)
+        print("Starting settings dialog...")
+        try:
+            from PyQt6.QtWidgets import QLabel, QWidget, QHBoxLayout, QVBoxLayout
+            from PyQt6.QtCore import Qt
 
-        layout = dialog.setup_basic_layout("Settings")
+            dialog = ModernDialog(self, "Settings")
+            dialog.setFixedSize(500, 450)
+            layout = dialog.setup_basic_layout("Settings")
+            layout.addSpacing(20)
+
+            def create_toggle_widget(is_enabled, disabled=False):
+                toggle_container = QWidget()
+                toggle_container.setFixedSize(50, 25)
+
+                if disabled:
+                    bg_color = "#666666"
+                    border_color = "#666666"
+                else:
+                    bg_color = "#4CAF50" if is_enabled else "#444444"
+                    border_color = "#4CAF50" if is_enabled else "#666666"
+
+                toggle_container.setStyleSheet(f"""
+                    QWidget {{
+                        background: {bg_color};
+                        border: 2px solid {border_color};
+                        border-radius: 12px;
+                    }}
+                """)
+
+                toggle_circle = QLabel("●")
+                toggle_circle.setParent(toggle_container)
+                circle_x = 25 if is_enabled else 3
+                toggle_circle.setGeometry(circle_x, 1, 22, 22)
+                toggle_circle.setStyleSheet("""
+                    QLabel {
+                        color: white;
+                        font-size: 16px;
+                        font-weight: bold;
+                        background: transparent;
+                        border: none;
+                    }
+                """)
+                toggle_circle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+                toggle_container.circle = toggle_circle
+                toggle_container.is_enabled = is_enabled
+                return toggle_container
+
+            def update_toggle_widget(toggle_container, is_enabled):
+                bg_color = "#4CAF50" if is_enabled else "#444444"
+                border_color = "#4CAF50" if is_enabled else "#666666"
+
+                toggle_container.setStyleSheet(f"""
+                    QWidget {{
+                        background: {bg_color};
+                        border: 2px solid {border_color};
+                        border-radius: 12px;
+                    }}
+                """)
+
+                circle_x = 25 if is_enabled else 3
+                toggle_container.circle.setGeometry(circle_x, 1, 22, 22)
+                toggle_container.is_enabled = is_enabled
+
+            def create_setting_row(text, toggle_widget):
+                row = QWidget()
+                row.setFixedHeight(40)
+                row_layout = QHBoxLayout(row)
+                row_layout.setContentsMargins(0, 0, 0, 0)
+
+                label = QLabel(text)
+                label.setStyleSheet("color: #ffffff; font-size: 12px;")
+
+                row_layout.addWidget(label)
+                row_layout.addStretch()
+                row_layout.addWidget(toggle_widget)
+                return row
+
+            # === USERNAME SECTION ===
+            username_label = QLabel("Account")
+            username_label.setStyleSheet("color: #4CAF50; font-size: 14px; font-weight: bold;")
+
+            username_input = ModernLineEdit()
+            username_input.setText(self.vault_data.get('username', ''))
+            username_input.setFixedHeight(40)
+            username_input.setReadOnly(True)
+            username_input.setStyleSheet("""
+                ModernLineEdit {
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    color: #888888;
+                    font-size: 12px;
+                }
+            """)
+
+            layout.addWidget(username_label)
+            layout.addWidget(username_input)
+            layout.addSpacing(25)
+
+            # === ANALYTICS SECTION ===
+            analytics_label = QLabel("Privacy")
+            analytics_label.setStyleSheet("color: #4CAF50; font-size: 14px; font-weight: bold;")
+
+            try:
+                from gui.analytics_manager import should_collect_analytics, set_consent_choice
+                current_analytics = should_collect_analytics()
+                analytics_available = True
+            except ImportError:
+                current_analytics = False
+                analytics_available = False
+
+            analytics_toggle = create_toggle_widget(current_analytics, not analytics_available)
+
+            def toggle_analytics():
+                if not analytics_available:
+                    return
+                try:
+                    new_state = not analytics_toggle.is_enabled
+                    success = set_consent_choice(new_state)
+                    if success:
+                        update_toggle_widget(analytics_toggle, new_state)
+                except Exception as e:
+                    print(f"Analytics toggle error: {e}")
+
+            analytics_toggle.mousePressEvent = lambda e: toggle_analytics()
+            analytics_row = create_setting_row("Anonymous Analytics", analytics_toggle)
+
+            layout.addWidget(analytics_label)
+            layout.addWidget(analytics_row)
+            layout.addSpacing(25)
+
+            # === SYSTEM SECTION ===
+            system_label = QLabel("System")
+            system_label.setStyleSheet("color: #4CAF50; font-size: 14px; font-weight: bold;")
+
+            try:
+                from tray.startup_manager import StartupManager
+                startup_manager = StartupManager()
+                current_startup = startup_manager.is_startup_enabled()
+                print(f"DEBUG: Initial startup state detected: {current_startup}")
+            except ImportError:
+                startup_manager = None
+                current_startup = False
+
+            startup_toggle = create_toggle_widget(current_startup, startup_manager is None)
+
+            def toggle_startup():
+                if not startup_manager:
+                    return
+                try:
+                    new_state = not startup_toggle.is_enabled
+                    result = startup_manager.enable_startup() if new_state else startup_manager.disable_startup()
+                    if result:
+                        update_toggle_widget(startup_toggle, new_state)
+                except Exception as e:
+                    print(f"Startup toggle error: {e}")
+
+            if startup_manager:
+                startup_toggle.mousePressEvent = lambda e: toggle_startup()
+
+            startup_row = create_setting_row("Start with Windows", startup_toggle)
+
+            layout.addWidget(system_label)
+            layout.addWidget(startup_row)
+            layout.addSpacing(25)
+
+            # === THEME SECTION ===
+            theme_label = QLabel("Appearance")
+            theme_label.setStyleSheet("color: #4CAF50; font-size: 14px; font-weight: bold;")
+
+            theme_toggle = create_toggle_widget(True, disabled=True)
+
+            theme_row_widget = QWidget()
+            theme_row_widget.setFixedHeight(40)  # Add this line
+            theme_row_layout = QHBoxLayout(theme_row_widget)
+            theme_row_layout.setContentsMargins(0, 0, 0, 0)
+
+            theme_text = QLabel("Dark Theme")
+            theme_text.setStyleSheet("color: #ffffff; font-size: 12px;")
+
+            coming_soon = QLabel("Light theme coming soon")
+            coming_soon.setStyleSheet("color: #888888; font-size: 10px; font-style: italic;")
+
+            theme_row_layout.addWidget(theme_text)
+            theme_row_layout.addStretch()
+            theme_row_layout.addWidget(coming_soon)
+            theme_row_layout.addWidget(theme_toggle)
+
+            layout.addWidget(theme_label)
+            layout.addWidget(theme_row_widget)
+
+            layout.addSpacing(30)
+            layout.addStretch()
+
+            # === BUTTONS ===
+            button_layout = QHBoxLayout()
+
+            close_btn = ModernButton("Close", primary=True)
+            close_btn.clicked.connect(dialog.reject)
+
+            button_layout.addWidget(close_btn)
+            layout.addLayout(button_layout)
+
+            layout.addSpacing(10)
+
+            dialog.exec()
+            print("Settings dialog completed successfully!")
+
+
+        except Exception as e:
+            print(f"Settings dialog failed: {e}")
+            import traceback
+            traceback.print_exc()
+
+
+
+    def show_analytics_consent_dialog(self):
+        from gui.widgets.modern_widgets import ModernDialog, ModernButton
+        from PyQt6.QtWidgets import QVBoxLayout, QLabel, QHBoxLayout
+
+        dialog = ModernDialog(self, "Help Improve The Vault")
+        dialog.setFixedSize(500, 350)
+
+        layout = dialog.setup_basic_layout("Help Improve The Vault")
+        layout.addSpacing(15)
+
+        explanation = QLabel("""We'd like to collect anonymous usage data to help improve The Vault. This includes:
+
+    - Basic usage statistics (number of folders, entries)
+    - Feature usage (which features you use most)
+    - Performance metrics (app startup time)
+    - Version and OS information
+
+    No personal data, passwords, or vault contents are ever collected.
+    You can change this choice later in Settings.""")
+
+        explanation.setStyleSheet("color: #ffffff; font-size: 12px; line-height: 1.4;")
+        explanation.setWordWrap(True)
+        layout.addWidget(explanation)
+
         layout.addSpacing(20)
-
-        # Username section
-        username_container = QWidget()
-        username_container.setFixedHeight(60)
-        username_layout = QVBoxLayout(username_container)
-        username_layout.setContentsMargins(0, 0, 0, 0)
-        username_layout.setSpacing(5)
-
-        username_label = QLabel("Username:")
-        username_label.setStyleSheet("color: #ffffff; font-size: 12px;")
-        username_label.setFixedHeight(20)
-
-        username_input = ModernLineEdit()
-        username_input.setText(self.vault_data.get('username', ''))
-        username_input.setFixedHeight(35)
-        username_input.setReadOnly(True)
-        username_input.setStyleSheet("""
-            ModernLineEdit {
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                color: #888888;
-            }
-        """)
-
-        username_layout.addWidget(username_label)
-        username_layout.addWidget(username_input)
-        layout.addWidget(username_container)
-
-        layout.addSpacing(20)
-
-        # Theme section
-        theme_container = QWidget()
-        theme_container.setFixedHeight(60)
-        theme_layout = QVBoxLayout(theme_container)
-        theme_layout.setContentsMargins(0, 0, 0, 0)
-        theme_layout.setSpacing(5)
-
-        theme_label = QLabel("Current Theme:")
-        theme_label.setStyleSheet("color: #ffffff; font-size: 12px;")
-        theme_label.setFixedHeight(20)
-
-        # Theme toggle row
-        theme_row = QWidget()
-        theme_row_layout = QHBoxLayout(theme_row)
-        theme_row_layout.setContentsMargins(0, 0, 0, 0)
-        theme_row_layout.setSpacing(15)
-
-        dark_label = QLabel("Dark")
-        dark_label.setStyleSheet("color: #4CAF50; font-size: 11px; font-weight: bold;")
-
-        # Create toggle container
-        toggle_container = QWidget()
-        toggle_container.setFixedSize(60, 30)
-        toggle_container.setStyleSheet("""
-            QWidget {
-                background: #4CAF50;
-                border: 2px solid #45a049;
-                border-radius: 15px;
-            }
-        """)
-
-        # Create toggle circle
-        toggle_circle = QLabel("●")
-        toggle_circle.setParent(toggle_container)
-        toggle_circle.setGeometry(5, 2, 26, 26)
-        toggle_circle.setStyleSheet("""
-            QLabel {
-                color: white;
-                font-size: 20px;
-                font-weight: bold;
-                background: transparent;
-                border: none;
-            }
-        """)
-        toggle_circle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        light_label = QLabel("Light")
-        light_label.setStyleSheet("color: #888888; font-size: 11px;")
-
-        # Coming soon label
-        coming_soon = QLabel("(Coming Soon)")
-        coming_soon.setStyleSheet("color: #888888; font-size: 9px; font-style: italic;")
-
-        theme_row_layout.addWidget(dark_label)
-        theme_row_layout.addWidget(toggle_container)
-        theme_row_layout.addWidget(light_label)
-        theme_row_layout.addWidget(coming_soon)
-        theme_row_layout.addStretch()
-
-        theme_layout.addWidget(theme_label)
-        theme_layout.addWidget(theme_row)
-        layout.addWidget(theme_container)
-
-        layout.addSpacing(30)
         layout.addStretch()
 
         # Buttons
         button_layout = QHBoxLayout()
 
-        export_btn = ModernButton("Export Vault", primary=False)
-        export_btn.clicked.connect(self.export_vault)
+        decline_btn = ModernButton("No Thanks", primary=False)
+        decline_btn.clicked.connect(lambda: self._handle_consent_choice(False, dialog))
 
-        close_btn = ModernButton("Close", primary=True)
-        close_btn.clicked.connect(dialog.reject)
+        accept_btn = ModernButton("Help Improve", primary=True)
+        accept_btn.clicked.connect(lambda: self._handle_consent_choice(True, dialog))
 
-        button_layout.addWidget(export_btn)
-        button_layout.addWidget(close_btn)
+        button_layout.addWidget(decline_btn)
+        button_layout.addWidget(accept_btn)
         layout.addLayout(button_layout)
 
         dialog.exec()
 
-    def export_vault(self):
-        import json
+    def _handle_consent_choice(self, consent_given, dialog):
+        from gui.analytics_manager import set_consent_choice
 
-        # Ask user where to save the export
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Export Vault",
-            f"vault_export_{self.vault_data.get('username', 'user')}.json",
-            "JSON files (*.json);;All files (*.*)"
-        )
-
-        if file_path:
-            export_data = {
-                "username": self.vault_data.get("username"),
-                "data": self.vault_data.get("data", {}),
-                "exported_at": QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
-            }
-
-            with open(file_path, 'w') as f:
-                json.dump(export_data, f, indent=2)
-
-            # Show success message
-            QMessageBox.information(self, "Export Complete",
-                                    f"Vault exported successfully to:\n{file_path}")
+        # Store the choice
+        set_consent_choice(consent_given)
+        dialog.accept()

@@ -6,12 +6,12 @@ import os
 import webbrowser
 from packaging import version
 from config import is_dev_environment
+import dev_tools.dev_manager
 
 # Version management
-CURRENT_VERSION = "2.0.0"  # Update with each release
 VERSION_FILE = "version.txt"
 GITHUB_API_URL = "https://api.github.com/repos/AlexBenkarski/TheVault/releases/latest"
-
+CACHED_SECRETS = None
 
 def get_window_title():
     current_version = get_current_version()
@@ -21,10 +21,92 @@ def get_window_title():
     else:
         return f"The Vault v{current_version}"
 
+def get_discord_webhook():
+    if CACHED_SECRETS is None:
+        return None
+    try:
+        return CACHED_SECRETS["discord"]["webhook_url"]
+    except KeyError:
+        return None
+
+
+def get_firebase_credentials():
+    try:
+        if os.path.exists("vaultfirebase.json"):
+            return "vaultfirebase.json"
+        return None
+    except Exception as e:
+        print(f"Error loading Firebase credentials: {e}")
+        return None
+
+def load_secrets():
+    global CACHED_SECRETS
+    loaded_services = []
+
+    secrets_path = get_secrets_path()
+    print(f"Looking for secrets at: {secrets_path}")
+
+    if os.path.exists(secrets_path):
+        try:
+            if secrets_path.endswith('.enc'):
+                # Load encrypted secrets (production)
+                with open(secrets_path, 'r', encoding='utf-8') as f:
+                    encrypted_data = f.read().strip()
+
+                # Decrypt using embedded decryption function
+                from secrets_encryption import decrypt_secrets_data
+                secrets = decrypt_secrets_data(encrypted_data)
+
+                if secrets is None:
+                    print("Failed to decrypt secrets")
+                    CACHED_SECRETS = {}
+                    return []
+
+                print("Encrypted secrets loaded successfully")
+
+            else:
+                # Load plaintext secrets (development)
+                with open(secrets_path, 'r', encoding='utf-8') as f:
+                    secrets = json.load(f)
+                print("Using plaintext secrets (development mode)")
+
+            CACHED_SECRETS = secrets
+
+            if "discord" in secrets:
+                loaded_services.append("discord")
+            if "google_analytics" in secrets:
+                loaded_services.append("google_analytics")
+
+            print(f"Loaded services: {loaded_services}")
+
+        except Exception as e:
+            print(f"Error loading secrets: {e}")
+            CACHED_SECRETS = {}
+
+    else:
+        print("Secrets file not found - analytics disabled")
+        CACHED_SECRETS = {}
+
+    return loaded_services
+
+
+def get_secrets_path():
+    if getattr(sys, 'frozen', False):
+        app_dir = sys._MEIPASS
+        encrypted_path = os.path.join(app_dir, 'secrets.enc')
+        if os.path.exists(encrypted_path):
+            return encrypted_path
+        # Fallback to plaintext (development)
+        return os.path.join(app_dir, 'secrets.json')
+    else:
+        # Running as script - development mode, use plaintext
+        app_dir = get_app_directory()
+        return os.path.join(app_dir, 'secrets.json')
+
 
 def get_app_directory():
     if getattr(sys, 'frozen', False):
-        # Running as compiled executable
+        # Running as exe
         return os.path.dirname(sys.executable)
     else:
         # Running as script (development)
@@ -32,69 +114,83 @@ def get_app_directory():
 
 
 def get_current_version():
-    try:
+    if dev_tools.dev_manager.DEV_MODE_ACTIVE:
+        project_root = os.path.dirname(get_app_directory())
+        version_path = os.path.join(project_root, VERSION_FILE)
+        print(f"DEBUG: Dev mode - looking at: {version_path}")
+        print(f"DEBUG: File exists: {os.path.exists(version_path)}")
+        if os.path.exists(version_path):
+            with open(version_path, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                print(f"DEBUG: File content: '{content}'")
+                return content
+    else:
         app_dir = get_app_directory()
         version_path = os.path.join(app_dir, VERSION_FILE)
         if os.path.exists(version_path):
             with open(version_path, 'r', encoding='utf-8') as f:
                 return f.read().strip()
-    except Exception as e:
-        print(f"Failed to read version file: {e}")
-    return CURRENT_VERSION
+    return "Unknown"
+
 
 
 def check_for_updates():
-    try:
-        print("Checking for updates...")
+   try:
+       print("Checking for updates...")
 
-        headers = {
-            'User-Agent': 'TheVault-UpdateChecker/1.0',
-            'Accept': 'application/vnd.github.v3+json'
-        }
+       headers = {
+           'User-Agent': 'TheVault-UpdateChecker/1.0',
+           'Accept': 'application/vnd.github.v3+json'
+       }
 
-        response = requests.get(GITHUB_API_URL, headers=headers, timeout=10)
+       response = requests.get(GITHUB_API_URL, headers=headers, timeout=10)
 
-        if response.status_code == 200:
-            release_data = response.json()
-            latest_version = release_data['tag_name'].lstrip('v')
-            current_version = get_current_version()
+       if response.status_code == 200:
+           release_data = response.json()
+           latest_version = release_data['tag_name'].lstrip('v')
+           current_version = get_current_version()
 
-            print(f"Current version: {current_version}")
-            print(f"Latest version: {latest_version}")
+           # Add fallback for Unknown version
+           if current_version == "Unknown":
+               current_version = "2.0.4-beta"
+               print("Using fallback version for update check")
 
-            if version.parse(latest_version) > version.parse(current_version):
-                # Find the .exe asset in the release
-                exe_asset = None
-                for asset in release_data['assets']:
+           print(f"Current version: {current_version}")
+           print(f"Latest version: {latest_version}")
 
-                    if asset['name'] == 'Vault.exe' or (
-                            asset['name'].endswith('.exe') and 'Setup' not in asset['name']):
-                        exe_asset = asset
-                        break
+           if version.parse(latest_version) > version.parse(current_version):
+               # Find the .exe asset in the release
+               exe_asset = None
+               for asset in release_data['assets']:
 
-                if exe_asset:
-                    print(f"Update available: {exe_asset['name']}")
-                    return {
-                        'available': True,
-                        'version': latest_version,
-                        'download_url': exe_asset['browser_download_url'],
-                        'patch_notes': release_data['body'] or "No patch notes available.",
-                        'release_name': release_data['name'],
-                        'asset_name': exe_asset['name']
-                    }
-                else:
-                    print("No suitable .exe file found in latest release")
-            else:
-                print("No update needed - you have the latest version")
-        else:
-            print(f"Failed to check for updates: HTTP {response.status_code}")
+                   if asset['name'] == 'Vault.exe' or (
+                           asset['name'].endswith('.exe') and 'Setup' not in asset['name']):
+                       exe_asset = asset
+                       break
 
-    except requests.exceptions.RequestException as e:
-        print(f"Network error checking for updates: {e}")
-    except Exception as e:
-        print(f"Update check failed: {e}")
+               if exe_asset:
+                   print(f"Update available: {exe_asset['name']}")
+                   return {
+                       'available': True,
+                       'version': latest_version,
+                       'download_url': exe_asset['browser_download_url'],
+                       'patch_notes': release_data['body'] or "No patch notes available.",
+                       'release_name': release_data['name'],
+                       'asset_name': exe_asset['name']
+                   }
+               else:
+                   print("No suitable .exe file found in latest release")
+           else:
+               print("No update needed - you have the latest version")
+       else:
+           print(f"Failed to check for updates: HTTP {response.status_code}")
 
-    return {'available': False}
+   except requests.exceptions.RequestException as e:
+       print(f"Network error checking for updates: {e}")
+   except Exception as e:
+       print(f"Update check failed: {e}")
+
+   return {'available': False}
 
 
 def show_update_popup(parent, update_info):
@@ -106,7 +202,7 @@ def show_update_popup(parent, update_info):
 
         # Create update dialog
         dialog = ModernDialog(parent, "Update Available")
-        dialog.setFixedSize(600, 510)  # Increased height from 500 to 510
+        dialog.setFixedSize(600, 510)
 
         # Override dialog styling
         dialog.setStyleSheet("""
@@ -163,7 +259,6 @@ def show_update_popup(parent, update_info):
         scroll_layout.setSpacing(5)
         scroll_layout.setContentsMargins(15, 15, 15, 15)
 
-        # Parse patch notes
         patch_lines = update_info['patch_notes'].split('\n')
         for line in patch_lines:
             line = line.strip()
@@ -196,15 +291,14 @@ def show_update_popup(parent, update_info):
         scroll_area.setWidget(scroll_content)
         layout.addWidget(scroll_area)
 
-        layout.addSpacing(20)  # Increased spacing to push buttons down
+        layout.addSpacing(20)
 
         # Buttons
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(20)  # Reduced spacing to bring buttons closer
+        button_layout.setSpacing(20)
 
         update_btn = ModernButton("Update Now", primary=False)
         update_btn.setMinimumWidth(150)
-        # Add green border styling
         update_btn.setStyleSheet("""
             ModernButton {
                 background: rgba(255, 255, 255, 0.1);
@@ -228,14 +322,12 @@ def show_update_popup(parent, update_info):
         remind_btn.setMinimumWidth(150)
         remind_btn.clicked.connect(dialog.reject)
 
-        # Center buttons with less space between them
         button_layout.addStretch()
         button_layout.addWidget(update_btn)
         button_layout.addWidget(remind_btn)
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
-        # Show dialog
         dialog.exec()
 
     except Exception as e:
@@ -263,21 +355,19 @@ def start_update_process(parent, update_info, update_dialog):
             try:
                 process = subprocess.Popen([
                     updater_path,
-                    update_info['download_url'],  # Direct .exe download URL
+                    update_info['download_url'],
                     update_info['version'],
-                    json.dumps(update_info['patch_notes'])
+                    update_info['patch_notes']
                 ], cwd=app_dir)
 
                 print(f"Updater started with PID: {process.pid}")
 
-                # Give updater a moment to start, then close main app
                 from PyQt6.QtWidgets import QApplication
                 QApplication.instance().quit()
 
             except Exception as e:
                 raise Exception(f"Failed to start updater process: {str(e)}")
         else:
-            # Fallback: open browser to download manually
             print(f"Updater not found at: {updater_path}")
             webbrowser.open(update_info['download_url'])
             show_error_popup(parent,
@@ -342,7 +432,6 @@ def show_updating_popup(parent, update_info):
         wait_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(wait_label)
 
-        # Show dialog (non-modal so app can close)
         dialog.show()
 
     except Exception as e:
