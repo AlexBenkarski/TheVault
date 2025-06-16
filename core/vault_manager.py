@@ -5,9 +5,19 @@ import re
 from auth.auth_manager import verify_recovery_key, verify_login, derive_recovery_key_hash, generate_recovery_key, hash_new_password
 from config import get_vault_path, get_auth_path
 from security.encryption import decrypt_vault, encrypt_vault, derive_key, decrypt_password_with_recovery_key, encrypt_password_with_recovery_key
+try:
+    from dev_tools.dev_manager import DEV_MODE_ACTIVE, get_mock_credentials, get_mock_credentials, get_current_mock_data
+except ImportError:
+    DEV_MODE_ACTIVE = False
+    get_mock_credentials = lambda: (None, None)
+    get_current_mock_data = lambda: {}
 
 
 def load_vault(key: bytes):
+    import time
+
+    decrypt_start = time.time()
+
     vault_path = get_vault_path()
     with open(vault_path, "rb") as f:
         token = f.read()
@@ -15,14 +25,36 @@ def load_vault(key: bytes):
     data = decrypt_vault(token, key)
     data = {k.decode('utf-8') if isinstance(k, bytes) else k: v for k, v in data.items()}
 
+    # Track decrypt time
+    decrypt_time = (time.time() - decrypt_start) * 1000  # ms
+    try:
+        from gui.analytics_manager import update_metric
+        update_metric("performance.vault_decrypt_time_ms", decrypt_time)
+    except:
+        pass
+
     return data
 
 
 def save_vault(data: dict, key: bytes):
+    import time
+    save_start = time.time()
+
     vault_path = get_vault_path()
     token = encrypt_vault(data, key)
     with open(vault_path, "wb") as f:
         f.write(token)
+
+    # Track save performance
+    save_time = (time.time() - save_start) * 1000
+    print(f"DEBUG: Save took {save_time:.3f}ms")
+
+    try:
+        from gui.analytics_manager import update_metric
+        update_metric("performance.avg_save_time_ms", save_time)
+        print(f"DEBUG: Updated avg_save_time_ms to {save_time}")
+    except Exception as e:
+        print(f"DEBUG: Analytics save failed: {e}")
 
 
 
@@ -218,6 +250,8 @@ def recover_password(input_recovery_key, new_password, confirm_password):
 
 
 def user_verification(input_username, input_password):
+    if DEV_MODE_ACTIVE:
+        return get_mock_credentials
     auth_path = get_auth_path()
 
     try:

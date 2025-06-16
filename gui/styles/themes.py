@@ -40,6 +40,21 @@ QPushButton#windowControl {
 QPushButton#windowControl:hover {
     background: rgba(255, 255, 255, 0.2);
 }
+QPushButton#userProfileBtn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 15px;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+    padding-left: 10px;
+    padding-right: 15px;
+}
+
+QPushButton#userProfileBtn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 
 QPushButton#closeControl {
     background: rgba(255, 255, 255, 0.1);
@@ -261,6 +276,35 @@ QTextEdit[modern="true"] {
 QTextEdit[modern="true"]:focus {
     border: 2px solid #4CAF50;
     background: rgba(255, 255, 255, 0.15);
+}
+/* Remove focus outlines for all buttons */
+QPushButton:focus {
+    outline: none;
+    border: none;
+}
+
+ModernButton:focus {
+    outline: none;
+    border: none;
+}
+
+/* Remove focus outlines for other widgets */
+QLineEdit:focus {
+    outline: none;
+}
+
+ModernLineEdit:focus {
+    outline: none;
+}
+
+QCheckBox:focus {
+    outline: none;
+}
+
+/* For dialog buttons specifically */
+QPushButton[smallButton="true"]:focus {
+    outline: none;
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 """
 

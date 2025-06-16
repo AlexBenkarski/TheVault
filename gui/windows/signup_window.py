@@ -114,6 +114,10 @@ class SignupWindow(QWidget):
         version_label.setFont(QFont("Segoe UI", 9))
         version_label.setObjectName("versionLabel")
 
+        self.username_input.returnPressed.connect(self.handle_signup)
+        self.password_input.returnPressed.connect(self.handle_signup)
+        self.confirm_input.returnPressed.connect(self.handle_signup)
+
         version_layout.addWidget(version_label)
         layout.addLayout(version_layout)
 

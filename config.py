@@ -27,7 +27,6 @@ def get_default_vault_directory():
             os.makedirs(dev_vault_dir, exist_ok=True)
         return dev_vault_dir
     else:
-        # PRODUCTION: Return None to let user choose (existing behavior)
         return None
 
 
@@ -90,8 +89,6 @@ def get_vault_directory():
             return config.get('vault_directory')
         except Exception as e:
             print(f"Error reading config: {e}")
-
-    # If no config exists, return default for dev environment
     return get_default_vault_directory()
 
 
@@ -116,7 +113,6 @@ def get_current_vault_path():
 def update_config_paths(vault_directory):
     # Save to persistent config file
     if save_vault_directory(vault_directory):
-        # Update global variables (for current session)
         initialize_paths()
         return True
     return False

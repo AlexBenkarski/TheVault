@@ -52,3 +52,12 @@ vault_data/
 dev_vault_data/
 dev_config.json
 CHEATSHEET.md
+AI/
+build_release.ps1
+
+# Secrets
+gui/secrets.json
+analytics_data.json
+gui/vaultfirebase.json
+gui/secrets.enc
+gui/vaultfirebase.enc
