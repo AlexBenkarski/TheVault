@@ -152,7 +152,7 @@ def check_for_updates():
 
            # Add fallback for Unknown version
            if current_version == "Unknown":
-               current_version = "2.0.4-beta"
+               current_version = "2.0.6-beta"
                print("Using fallback version for update check")
 
            print(f"Current version: {current_version}")

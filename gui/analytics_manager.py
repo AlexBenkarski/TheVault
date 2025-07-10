@@ -425,3 +425,71 @@ def track_valorant_autofill_error(error_type):
     manager.analytics_data["feature_usage"]["valorant_autofill_error_count"] += 1
     manager.save_data_locally()
 
+def track_epic_autofill_triggered():
+    """Track when Epic Games auto-fill overlay appears"""
+    manager = get_or_create_manager()
+    if not manager:
+        return
+
+    # Initialize Epic metrics if they don't exist
+    if "epic_autofill_triggered_count" not in manager.analytics_data["feature_usage"]:
+        manager.analytics_data["feature_usage"].update({
+            "epic_autofill_triggered_count": 0,
+            "epic_autofill_successful_fills": 0,
+            "epic_autofill_cancelled_count": 0,
+            "epic_autofill_error_count": 0,
+            "epic_autofill_first_used": None,
+            "epic_autofill_last_used": None,
+        })
+
+    manager.analytics_data["feature_usage"]["epic_autofill_triggered_count"] += 1
+
+    # Set first use timestamp
+    if not manager.analytics_data["feature_usage"]["epic_autofill_first_used"]:
+        manager.analytics_data["feature_usage"]["epic_autofill_first_used"] = datetime.now().isoformat()
+
+    manager.analytics_data["feature_usage"]["epic_autofill_last_used"] = datetime.now().isoformat()
+    manager.save_data_locally()
+
+
+def track_epic_autofill_success():
+    """Track successful Epic Games credential filling"""
+    manager = get_or_create_manager()
+    if not manager:
+        return
+
+    # Initialize if needed
+    if "epic_autofill_successful_fills" not in manager.analytics_data["feature_usage"]:
+        manager.analytics_data["feature_usage"]["epic_autofill_successful_fills"] = 0
+
+    manager.analytics_data["feature_usage"]["epic_autofill_successful_fills"] += 1
+    manager.save_data_locally()
+
+
+def track_epic_autofill_cancelled():
+    """Track when user cancels Epic Games auto-fill"""
+    manager = get_or_create_manager()
+    if not manager:
+        return
+
+    # Initialize if needed
+    if "epic_autofill_cancelled_count" not in manager.analytics_data["feature_usage"]:
+        manager.analytics_data["feature_usage"]["epic_autofill_cancelled_count"] = 0
+
+    manager.analytics_data["feature_usage"]["epic_autofill_cancelled_count"] += 1
+    manager.save_data_locally()
+
+
+def track_epic_autofill_error(error_type):
+    """Track Epic Games auto-fill errors"""
+    manager = get_or_create_manager()
+    if not manager:
+        return
+
+    # Initialize if needed
+    if "epic_autofill_error_count" not in manager.analytics_data["feature_usage"]:
+        manager.analytics_data["feature_usage"]["epic_autofill_error_count"] = 0
+
+    manager.analytics_data["feature_usage"]["epic_autofill_error_count"] += 1
+    manager.save_data_locally()
+

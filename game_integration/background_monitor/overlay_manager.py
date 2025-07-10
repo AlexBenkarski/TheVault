@@ -294,7 +294,13 @@ class VaultOverlay(QWidget):
             if vault_key:
                 self.vault_key = vault_key
                 self.vault_data = load_vault(vault_key)
-                self.show_account_list()
+
+                if hasattr(self, 'post_login_action') and self.post_login_action == 'epic':
+                    print("Redirecting to Epic accounts after login")
+                    self.show_epic_account_list()
+                else:
+                    print("Showing default Valorant accounts after login")
+                    self.show_account_list()
             else:
                 self.show_error("Invalid vault password")
 
@@ -565,3 +571,403 @@ class VaultOverlay(QWidget):
 
         self.hide()
         self.finished.emit()
+
+    def find_epic_accounts(self):
+        """Find accounts only in Epic Games-related folders"""
+        accounts = []
+        epic_folders = ['epic', 'Epic', 'epic games', 'Epic Games', 'epicgames', 'EpicGames']
+
+        for folder_name, folder_data in self.vault_data.items():
+            if folder_name not in epic_folders:
+                continue
+
+            entries = folder_data.get("entries", [])
+
+            for entry in entries:
+                username = None
+                password = None
+                title = None
+
+                # Find username
+                for field in ['Username', 'username', 'User', 'user', 'Email', 'email']:
+                    if field in entry and entry[field]:
+                        username = entry[field]
+                        break
+
+                # Find password
+                for field in ['Password', 'password', 'Pass', 'pass']:
+                    if field in entry and entry[field]:
+                        password = entry[field]
+                        break
+
+                # Find title
+                for field in ['Title', 'title', 'Name', 'name']:
+                    if field in entry and entry[field]:
+                        title = entry[field]
+                        break
+
+                # Use username as fallback if no title
+                if not title:
+                    title = username
+
+                if username and password and title:
+                    accounts.append({
+                        'username': username,
+                        'password': password,
+                        'title': title,
+                        'folder': folder_name
+                    })
+
+        return accounts
+
+    def show_epic_account_list(self):
+        """Show list of Epic Games accounts with proper styling"""
+        self.clear_layout()
+
+        # Title section
+        title_layout = QVBoxLayout()
+        title_layout.setSpacing(5)
+
+        from gui.widgets.modern_widgets import LogoWidget
+        logo_label = LogoWidget()
+        title_layout.addWidget(logo_label)
+
+        app_title = QLabel("TheVault")
+        app_title.setFont(QFont("Segoe UI", 28, QFont.Weight.Bold))
+        app_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        app_title.setStyleSheet("color: #ffffff; background: transparent;")
+
+        subtitle = QLabel("Select Epic Games Account")
+        subtitle.setFont(QFont("Segoe UI", 14))
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setObjectName("subtitle")
+        subtitle.setStyleSheet("color: #b0b0b0; background: transparent;")
+
+        title_layout.addWidget(app_title)
+        title_layout.addWidget(subtitle)
+
+        title_widget = QWidget()
+        title_widget.setObjectName("titleWidget")
+        title_widget.setLayout(title_layout)
+        self.layout.addWidget(title_widget)
+
+        self.layout.addSpacing(10)
+
+        # Find Epic accounts
+        accounts = self.find_epic_accounts()
+
+        if not accounts:
+            no_accounts = QLabel("No Epic Games accounts found")
+            no_accounts.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            no_accounts.setStyleSheet("color: #888888; font-size: 14px; background: transparent;")
+            self.layout.addWidget(no_accounts)
+
+            instruction = QLabel("Create accounts in folders named:\n'Epic', 'Epic Games', or 'epicgames'")
+            instruction.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            instruction.setStyleSheet("color: #b0b0b0; font-size: 12px; font-style: italic; background: transparent;")
+            self.layout.addWidget(instruction)
+        else:
+            from PyQt6.QtWidgets import QScrollArea
+
+            scroll_area = QScrollArea()
+            scroll_area.setWidgetResizable(True)
+            scroll_area.setFixedHeight(220)
+            scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            scroll_area.setStyleSheet("""
+                QScrollArea {
+                    border: none;
+                    background: transparent;
+                }
+                QScrollArea > QWidget > QWidget {
+                    background: transparent;
+                }
+                QScrollBar:vertical {
+                    background: rgba(255, 255, 255, 0.1);
+                    width: 12px;
+                    border-radius: 6px;
+                    margin: 0px;
+                }
+                QScrollBar::handle:vertical {
+                    background: rgba(255, 255, 255, 0.3);
+                    border-radius: 6px;
+                    min-height: 20px;
+                }
+                QScrollBar::handle:vertical:hover {
+                    background: rgba(255, 255, 255, 0.5);
+                }
+                QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                    border: none;
+                    background: none;
+                    height: 0px;
+                }
+            """)
+
+            accounts_widget = QWidget()
+            accounts_widget.setStyleSheet("background: transparent;")
+            accounts_layout = QVBoxLayout(accounts_widget)
+            accounts_layout.setSpacing(8)
+            accounts_layout.setContentsMargins(5, 5, 5, 5)
+
+            # Add account buttons
+            for account in accounts:
+                account_btn = QPushButton(account['title'])
+                account_btn.setFixedHeight(40)
+                account_btn.setStyleSheet("""
+                    QPushButton {
+                        background: rgba(255, 255, 255, 0.08);
+                        border: 1px solid rgba(255, 255, 255, 0.15);
+                        border-radius: 8px;
+                        color: #ffffff;
+                        font-weight: bold;
+                        font-size: 12px;
+                        text-align: left;
+                        padding-left: 15px;
+                    }
+                    QPushButton:hover {
+                        background: rgba(255, 255, 255, 0.15);
+                        border: 1px solid rgba(255, 255, 255, 0.25);
+                    }
+                    QPushButton:pressed {
+                        background: rgba(255, 255, 255, 0.2);
+                    }
+                """)
+                account_btn.clicked.connect(lambda checked, acc=account: self.select_epic_account(acc))
+                accounts_layout.addWidget(account_btn)
+
+            accounts_layout.addStretch()
+            scroll_area.setWidget(accounts_widget)
+            self.layout.addWidget(scroll_area)
+
+        self.layout.addSpacing(25)
+
+        # Cancel button
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.setMinimumHeight(45)
+        cancel_btn.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
+        cancel_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+                border: 2px solid rgba(255, 255, 255, 0.25);
+                border-radius: 12px;
+                padding: 12px 24px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.15);
+                border: 2px solid rgba(255, 255, 255, 0.35);
+            }
+            QPushButton:pressed {
+                background: rgba(255, 255, 255, 0.2);
+            }
+        """)
+        cancel_btn.clicked.connect(self.close_overlay)
+        self.layout.addWidget(cancel_btn)
+
+    def select_epic_account(self, account):
+        """Fill selected Epic Games account"""
+        print(f"Selected Epic account: {account['title']}")
+
+        try:
+            import pyautogui
+            import time
+
+            self.hide()
+            time.sleep(0.5)
+
+            # Epic Games specific autofill logic
+            # Stage 1: Email
+            pyautogui.hotkey('ctrl', 'a')
+            pyautogui.typewrite(account['username'])
+            pyautogui.press('enter')
+
+            # Stage 2: Password
+            time.sleep(1)  # Wait for password screen to load
+            pyautogui.press('tab')
+            pyautogui.typewrite(account['password'])
+
+            # 3 tabs to sign-in button
+            for i in range(3):
+                pyautogui.press('tab')
+            pyautogui.press('enter')
+
+            print("Epic account filled successfully!")
+
+            # Track analytics for Epic Games
+            from gui.analytics_manager import track_epic_autofill_success
+            track_epic_autofill_success()
+
+            self.close_overlay()
+
+        except Exception as e:
+            print(f"Epic fill error: {e}")
+            from gui.analytics_manager import track_epic_autofill_error
+            track_epic_autofill_error("autofill_failed")
+            self.show_error("Failed to fill Epic Games account")
+
+    def standardize_epic_window(self):
+        """Standardize Epic Games window to known size and position"""
+        try:
+            import pygetwindow as gw
+
+            windows = gw.getWindowsWithTitle("Epic Games Launcher")
+            if not windows:
+                return False
+
+            epic_window = windows[0]
+
+            # Standard size and position
+            standard_width = 1200
+            standard_height = 800
+
+            # Center on screen
+            from PyQt6.QtGui import QGuiApplication
+            screen = QGuiApplication.primaryScreen().geometry()
+            standard_x = (screen.width() - standard_width) // 2
+            standard_y = (screen.height() - standard_height) // 2
+
+            # Resize and move Epic window
+            epic_window.resizeTo(standard_width, standard_height)
+            epic_window.moveTo(standard_x, standard_y)
+
+            print(f"Epic window standardized to {standard_width}x{standard_height} at ({standard_x}, {standard_y})")
+            return True
+
+        except Exception as e:
+            print(f"Failed to standardize Epic window: {e}")
+            return False
+
+    def show_epic_mode_selection(self):
+        """Show Epic-specific Auto-Fill Mode vs Exit choice"""
+        self.clear_layout()
+
+        # Title section
+        title_layout = QVBoxLayout()
+        title_layout.setSpacing(5)
+
+        from gui.widgets.modern_widgets import LogoWidget
+        logo_label = LogoWidget()
+        title_layout.addWidget(logo_label)
+
+        app_title = QLabel("TheVault")
+        app_title.setFont(QFont("Segoe UI", 28, QFont.Weight.Bold))
+        app_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        app_title.setStyleSheet("color: #ffffff; background: transparent;")
+
+        subtitle = QLabel("Epic Games Auto-Fill")
+        subtitle.setFont(QFont("Segoe UI", 14))
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setObjectName("subtitle")
+        subtitle.setStyleSheet("color: #b0b0b0; background: transparent;")
+
+        title_layout.addWidget(app_title)
+        title_layout.addWidget(subtitle)
+
+        title_widget = QWidget()
+        title_widget.setObjectName("titleWidget")
+        title_widget.setLayout(title_layout)
+        self.layout.addWidget(title_widget)
+
+        self.layout.addSpacing(20)
+
+        # Message
+        message = QLabel("Epic's resizable window requires standardization for reliable auto-fill")
+        message.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        message.setStyleSheet("color: #ffffff; font-size: 12px; background: transparent;")
+        message.setWordWrap(True)
+        self.layout.addWidget(message)
+
+        self.layout.addSpacing(30)
+
+        # Auto-Fill Mode button
+        autofill_btn = QPushButton("Auto-Fill Mode")
+        autofill_btn.setMinimumHeight(50)
+        autofill_btn.setFont(QFont("Segoe UI", 12, QFont.Weight.Medium))
+        autofill_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #4CAF50, stop:1 #45a049);
+                color: white;
+                border: none;
+                border-radius: 12px;
+                padding: 15px 30px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #45a049, stop:1 #3d8b40);
+            }
+            QPushButton:pressed {
+                background: #3d8b40;
+            }
+        """)
+        autofill_btn.clicked.connect(self.handle_epic_autofill_mode)
+        self.layout.addWidget(autofill_btn)
+
+        self.layout.addSpacing(15)
+
+        # Exit button
+        exit_btn = QPushButton("Exit")
+        exit_btn.setMinimumHeight(45)
+        exit_btn.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
+        exit_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+                border: 2px solid rgba(255, 255, 255, 0.25);
+                border-radius: 12px;
+                padding: 12px 24px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.15);
+                border: 2px solid rgba(255, 255, 255, 0.35);
+            }
+            QPushButton:pressed {
+                background: rgba(255, 255, 255, 0.2);
+            }
+        """)
+        exit_btn.clicked.connect(self.close_overlay)
+        self.layout.addWidget(exit_btn)
+
+        self.layout.addStretch()
+
+        def close_overlay(self):
+            """Close the overlay and reset detection"""
+            print("Epic overlay closed by user")
+
+            # Track cancellation
+            from gui.analytics_manager import track_epic_autofill_cancelled
+            track_epic_autofill_cancelled()
+
+            self.hide()
+            self.finished.emit()
+
+        """Handle Auto-Fill Mode selection"""
+        print("Epic Auto-Fill Mode selected")
+
+        # Standardize Epic window first
+        if not self.standardize_epic_window():
+            self.show_error("Failed to standardize Epic window")
+            return
+
+    def handle_epic_autofill_mode(self):
+        """Handle Auto-Fill Mode selection - resize and close, wait for new click"""
+        print("Epic Auto-Fill Mode selected - resizing window")
+
+        # Standardize Epic window
+        if not self.standardize_epic_window():
+            self.show_error("Failed to standardize Epic window")
+            return
+
+        print("Epic window resized - closing overlay, waiting for username field click")
+
+        # Hide overlay and reset flag without disabling detection
+        self.hide()
+
+        # Reset the overlay shown flag so user can trigger again
+        if hasattr(self, 'main_app') and hasattr(self.main_app, 'epic_detector'):
+            self.main_app.epic_detector.reset_overlay_flag_after_resize()

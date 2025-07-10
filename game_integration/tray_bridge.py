@@ -35,6 +35,41 @@ class GameIntegrationBridge(QObject):
             self.riot_detector.start_monitoring()
             print("Bridge: Started Riot monitoring")
 
+        # Add Epic monitoring
+        if self.epic_detector and hasattr(self.epic_detector, 'start_monitoring'):
+            self.epic_detector.start_monitoring()
+            print("Bridge: Started Epic monitoring")
+
+    def stop_monitoring(self):
+        """Stop all game monitoring systems"""
+        self.is_monitoring = False
+
+        if self.riot_detector and hasattr(self.riot_detector, 'stop_monitoring'):
+            self.riot_detector.stop_monitoring()
+            print("Bridge: Stopped Riot monitoring")
+
+        # Add Epic monitoring
+        if self.epic_detector and hasattr(self.epic_detector, 'stop_monitoring'):
+            self.epic_detector.stop_monitoring()
+            print("Bridge: Stopped Epic monitoring")
+
+    def get_monitoring_status(self):
+        """Get overall monitoring status"""
+        statuses = []
+
+        if self.is_riot_monitoring_active():
+            statuses.append("Riot active")
+
+        if self.is_epic_monitoring_active():
+            statuses.append("Epic active")
+
+        if statuses:
+            return "; ".join(statuses)
+        elif self.is_monitoring:
+            return "Game integration ready"
+        else:
+            return "Game integration stopped"
+
 
     def stop_monitoring(self):
         """Stop all game monitoring systems"""
@@ -92,3 +127,19 @@ class GameIntegrationBridge(QObject):
         if overlay_manager:
             self.set_overlay_manager(overlay_manager)
         print("Bridge: Initialized with existing game systems")
+
+    def set_epic_detector(self, epic_detector):
+        self.epic_detector = epic_detector
+
+        if hasattr(epic_detector, 'username_field_detected'):
+            epic_detector.username_field_detected.connect(self._on_epic_field_detected)
+            print("Bridge: Connected to EpicDetector signals")
+
+    def _on_epic_field_detected(self):
+        print("Bridge: Epic username field detected by existing detector")
+
+    def is_epic_monitoring_active(self):
+        """Check if Epic monitoring is active"""
+        if self.epic_detector and hasattr(self.epic_detector, 'monitoring'):
+            return self.epic_detector.monitoring
+        return False

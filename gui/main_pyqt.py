@@ -3,7 +3,7 @@ import sys
 import os
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QStackedWidget, \
     QLabel
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
 from dev_tools.dev_manager import persistent_dev_cli
 from gui.analytics_manager import AnalyticsManager
@@ -19,15 +19,14 @@ from datetime import datetime
 from tray import SystemTrayManager
 from PyQt6.QtWidgets import QSystemTrayIcon
 from game_integration.tray_bridge import GameIntegrationBridge
+from game_integration.background_monitor.epic_detector import EpicDetector
+
 
 
 class TheVaultApp(QMainWindow):
     def __init__(self):
         startup_start = time.time()
         super().__init__()
-
-        # Start monitoring after basic init
-        self.start_riot_monitoring()
 
         self.session_start = time.time()
         atexit.register(self._cleanup_session)
@@ -47,6 +46,9 @@ class TheVaultApp(QMainWindow):
         self._init_game_integration_bridge()
         self._init_system_tray()
         self._setup_signal_checking()
+
+        # Start monitoring after basic init
+        self.start_game_monitoring()
 
         self.drag_position = None
 
@@ -82,14 +84,19 @@ class TheVaultApp(QMainWindow):
         if self.isMinimized():
             self.showNormal()
 
-
-    def start_riot_monitoring(self):
-        """Start background Riot detection"""
+    def start_game_monitoring(self):
+        """Start background game detection for Riot and Epic"""
+        # Existing Riot detection
         from game_integration.background_monitor.riot_detector import RiotDetector
 
         self.riot_detector = RiotDetector()
         self.riot_detector.username_field_detected.connect(self.show_vault_overlay)
         self.riot_detector.start_monitoring()
+
+        # New Epic detection
+        self.epic_detector = EpicDetector()
+        self.epic_detector.username_field_detected.connect(self.show_epic_overlay)
+        self.epic_detector.start_monitoring()
 
     def _init_game_integration_bridge(self):
         """Initialize bridge for existing game integration systems"""
@@ -98,7 +105,10 @@ class TheVaultApp(QMainWindow):
         if hasattr(self, 'riot_detector'):
             self.game_bridge.set_riot_detector(self.riot_detector)
 
-        print("Game integration bridge initialized")
+        if hasattr(self, 'epic_detector'):
+            self.game_bridge.set_epic_detector(self.epic_detector)
+
+        print("Game integration bridge initialized with Riot and Epic")
 
     def _init_system_tray(self):
         """Initialize system tray functionality"""
@@ -139,6 +149,46 @@ class TheVaultApp(QMainWindow):
 
         except Exception as e:
             print(f"ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def show_epic_overlay(self):
+        """Show Epic overlay - either direct autofill or mode selection"""
+        print("=== EPIC SIGNAL RECEIVED ===")
+
+        try:
+            from game_integration.background_monitor.overlay_manager import VaultOverlay
+
+            if not hasattr(self, 'epic_overlay') or self.epic_overlay is None:
+                print("Creating new Epic overlay...")
+                self.epic_overlay = VaultOverlay(main_app=self)
+                self.epic_overlay.finished.connect(self.epic_detector.reset_overlay_flag)
+
+            # Check if Epic is already standard size
+            if self.epic_detector.is_epic_standard_size():
+                print("Epic is standard size - showing direct autofill")
+                # Skip popup, go straight to vault check
+                if self.epic_overlay.is_vault_already_open():
+                    self.epic_overlay.load_vault_from_main_app()
+                    self.epic_overlay.show_epic_account_list()
+                else:
+                    self.epic_overlay.show_vault_login()
+                    self.epic_overlay.post_login_action = 'epic'
+            else:
+                print("Epic needs resize - showing mode selection")
+                # Show resize popup
+                self.epic_overlay.show_epic_mode_selection()
+
+            # Track Epic analytics
+            from gui.analytics_manager import track_epic_autofill_triggered
+            track_epic_autofill_triggered()
+
+            self.epic_overlay.show()
+            self.epic_overlay.raise_()
+            self.epic_overlay.activateWindow()
+
+        except Exception as e:
+            print(f"ERROR showing Epic overlay: {e}")
             import traceback
             traceback.print_exc()
 
@@ -724,6 +774,19 @@ class TheVaultApp(QMainWindow):
             self.login_window.set_error_message("Please enter both username and password")
             return
 
+        # CHECK BETA ACCESS FIRST - NEW
+        try:
+            from beta.beta_validator import BetaKeyValidator
+            validator = BetaKeyValidator()
+            allowed, beta_error = validator.check_beta_access_on_login(username)
+            if not allowed:
+                self.login_window.set_error_message(beta_error)
+                return
+        except:
+            # Beta check failed, continue with normal login
+            pass
+
+        # Normal login process (unchanged)
         from core.vault_manager import user_verification, load_vault
 
         vault_key, verified_username = user_verification(username, password)
@@ -734,8 +797,12 @@ class TheVaultApp(QMainWindow):
         else:
             self.login_window.set_error_message("Invalid username or password")
 
-    def handle_signup(self, username, password, confirm_password, vault_location):
-        # Basic validation checks
+    # Update signup_window.py signal to include beta_key
+    class SignupWindow(QWidget):
+        signup_requested = pyqtSignal(str, str, str, str, str)  # Added str for beta_key
+
+    def handle_signup(self, username, password, confirm_password, vault_location, beta_key=""):
+        # Basic validation checks (unchanged)
         if not all([username, password, confirm_password]):
             self.signup_window.set_error_message("Please fill in all fields")
             return
@@ -754,11 +821,21 @@ class TheVaultApp(QMainWindow):
             self.signup_window.set_error_message("Failed to update configuration.")
             return
 
-        # Create new account without vault_location (uses updated config)
+        # Create new account
         from core.vault_manager import handle_first_setup
         success, message = handle_first_setup(username, password)
 
         if success:
+            # Save beta key to auth file if provided
+            if beta_key:
+                try:
+                    from beta.beta_validator import BetaKeyValidator
+                    validator = BetaKeyValidator()
+                    from config import get_auth_path
+                    validator.save_beta_key_to_auth(get_auth_path(), beta_key)
+                except:
+                    pass  # Don't fail signup if beta save fails
+
             recovery_key = message
             self._show_recovery_key_dialog(recovery_key)
         else:
@@ -979,12 +1056,11 @@ class TheVaultApp(QMainWindow):
                 print(f"Analytics cleanup failed: {e}")
 
     def closeEvent(self, event):
-        """Override close event to minimize to tray instead of closing"""
+        """Override close event to stop all monitoring"""
         if (hasattr(self, 'tray_manager') and
                 self.tray_manager and
                 self.tray_manager.tray_icon.isVisible()):
 
-            # Minimize to tray instead of closing
             self.hide()
             self.tray_manager.show_notification(
                 "TheVault",
@@ -998,6 +1074,10 @@ class TheVaultApp(QMainWindow):
                 self.tray_manager.stop_monitoring()
             if hasattr(self, 'game_bridge'):
                 self.game_bridge.stop_monitoring()
+            if hasattr(self, 'riot_detector'):
+                self.riot_detector.stop_monitoring()
+            if hasattr(self, 'epic_detector'):
+                self.epic_detector.stop_monitoring()
             event.accept()
 
 

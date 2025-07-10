@@ -6,7 +6,7 @@ from gui.widgets.modern_widgets import ModernButton, ModernLineEdit, LogoWidget,
 
 
 class SignupWindow(QWidget):
-    signup_requested = pyqtSignal(str, str, str, str)
+    signup_requested = pyqtSignal(str, str, str, str, str)
     back_to_login_requested = pyqtSignal()
 
     def __init__(self):
@@ -48,6 +48,23 @@ class SignupWindow(QWidget):
         self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.error_label.hide()
         form_layout.addWidget(self.error_label)
+
+        # BETA KEY FIELD
+        try:
+            from beta.beta_validator import BetaKeyValidator
+            self.beta_validator = BetaKeyValidator()
+
+            if self.beta_validator.is_beta_active():
+                beta_label = QLabel("Beta Access Key")
+                beta_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
+                self.beta_input = ModernLineEdit("VAULT-XXXX-XXXX-XXXX")
+
+                form_layout.addWidget(beta_label)
+                form_layout.addWidget(self.beta_input)
+                form_layout.addSpacing(8)
+        except ImportError:
+            # Beta system not available, continue without it
+            pass
 
         # Username field
         username_label = QLabel("Username")
@@ -240,7 +257,21 @@ class SignupWindow(QWidget):
 
         self.clear_error_message()
 
-        # Basic validation
+        # BETA KEY VALIDATION - UPDATED
+        beta_key_to_save = ""
+        try:
+            if hasattr(self, 'beta_validator') and self.beta_validator.is_beta_active():
+                beta_key = self.beta_input.text().strip() if hasattr(self, 'beta_input') else ""
+                success, error, validated_key = self.beta_validator.validate_and_activate_key(beta_key, username)
+                if not success:
+                    self.set_error_message(error)
+                    return
+                beta_key_to_save = validated_key
+        except:
+            # Beta system failed, continue anyway (don't block existing users)
+            pass
+
+        # Basic validation (unchanged)
         if not username or not password or not confirm_password:
             self.set_error_message("Please fill in all fields")
             return
@@ -264,7 +295,8 @@ class SignupWindow(QWidget):
             self.set_error_message("Please select a vault location")
             return
 
-        self.signup_requested.emit(username, password, confirm_password, vault_location)
+        # Pass beta key to main app
+        self.signup_requested.emit(username, password, confirm_password, vault_location, beta_key_to_save)
 
     def focus_first_input(self):
         self.username_input.setFocus()
