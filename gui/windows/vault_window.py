@@ -27,7 +27,12 @@ class VaultWindow(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # Main content area with fixed layout
+        # Add navigation bar
+        nav_bar = self.create_simple_nav_bar()
+        nav_bar.setFixedHeight(60)
+        main_layout.addWidget(nav_bar)
+
+        # Main content area with fixed layout (YOUR ORIGINAL CODE)
         content_layout = QHBoxLayout()
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
@@ -53,19 +58,678 @@ class VaultWindow(QWidget):
 
         self.setLayout(main_layout)
 
+    def create_simple_nav_bar(self):
+        """Create navigation bar that matches mockup exactly"""
+        nav_bar = QWidget()
+        nav_bar.setFixedHeight(60)
+        nav_bar.setStyleSheet("""
+            QWidget {
+                background: #1a1a1d;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            }
+        """)
+
+        layout = QHBoxLayout(nav_bar)
+        layout.setContentsMargins(20, 0, 20, 0)
+        layout.setSpacing(0)
+
+        # Left side - Logo and navigation
+        left_layout = QHBoxLayout()
+        left_layout.setSpacing(32)
+
+        # Logo and app name
+        logo_layout = QHBoxLayout()
+        logo_layout.setSpacing(8)
+
+        from gui.widgets.modern_widgets import LogoWidget
+        logo = LogoWidget()
+        logo.setFixedSize(24, 24)
+
+        app_name = QLabel("TheVault")
+        app_name.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        app_name.setStyleSheet("color: #ffffff;")
+
+        logo_layout.addWidget(logo)
+        logo_layout.addWidget(app_name)
+
+        # Navigation tabs
+        nav_tabs = QHBoxLayout()
+        nav_tabs.setSpacing(24)
+
+        tabs = [
+            ("🔒", "Vault", True),  # Active tab
+            ("🛡️", "Security", False),
+            ("👥", "Friends", False),
+            ("📝", "Notes", False),
+            ("⚙️", "Settings", False)
+        ]
+
+        for icon, text, is_active in tabs:
+            tab = self.create_nav_tab(icon, text, is_active)
+            nav_tabs.addWidget(tab)
+
+        left_layout.addLayout(logo_layout)
+        left_layout.addLayout(nav_tabs)
+
+        layout.addLayout(left_layout)
+        layout.addStretch()
+
+        # Right side - Search and user profile
+        right_layout = QHBoxLayout()
+        right_layout.setSpacing(16)
+
+        # Search bar
+        search_bar = QLineEdit()
+        search_bar.setPlaceholderText("Search everything...")
+        search_bar.setFixedSize(280, 36)
+        search_bar.setStyleSheet("""
+            QLineEdit {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                color: #ffffff;
+                font-size: 12px;
+                padding: 0px 12px;
+            }
+            QLineEdit:focus {
+                border: 1px solid rgba(76, 175, 80, 0.5);
+                background: rgba(255, 255, 255, 0.08);
+            }
+            QLineEdit::placeholder {
+                color: #666666;
+            }
+        """)
+
+        # Notification bell
+        notification_btn = QPushButton("🔔")
+        notification_btn.setFixedSize(36, 36)
+        notification_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                color: #ffffff;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+        """)
+
+        # User profile button
+        user_btn = QPushButton("JD")
+        user_btn.setFixedSize(36, 36)
+        user_btn.setStyleSheet("""
+            QPushButton {
+                background: #4CAF50;
+                border: none;
+                border-radius: 18px;
+                color: white;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: #45a049;
+            }
+        """)
+
+        right_layout.addWidget(search_bar)
+        right_layout.addWidget(notification_btn)
+        right_layout.addWidget(user_btn)
+
+        layout.addLayout(right_layout)
+
+        return nav_bar
+
+    def create_nav_tab(self, icon, text, is_active=False):
+        """Create a navigation tab button"""
+        tab = QPushButton()
+        tab.setFixedHeight(36)
+        tab.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        tab_layout = QHBoxLayout(tab)
+        tab_layout.setContentsMargins(12, 0, 12, 0)
+        tab_layout.setSpacing(6)
+
+        icon_label = QLabel(icon)
+        icon_label.setStyleSheet("background: transparent; font-size: 14px;")
+
+        text_label = QLabel(text)
+        text_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
+        text_label.setStyleSheet("background: transparent;")
+
+        tab_layout.addWidget(icon_label)
+        tab_layout.addWidget(text_label)
+
+        if is_active:
+            tab.setStyleSheet("""
+                QPushButton {
+                    background: rgba(76, 175, 80, 0.15);
+                    border: none;
+                    border-radius: 8px;
+                    color: #4CAF50;
+                }
+            """)
+            text_label.setStyleSheet("color: #4CAF50; background: transparent;")
+        else:
+            tab.setStyleSheet("""
+                QPushButton {
+                    background: transparent;
+                    border: none;
+                    border-radius: 8px;
+                    color: #888888;
+                }
+                QPushButton:hover {
+                    background: rgba(255, 255, 255, 0.05);
+                    color: #ffffff;
+                }
+            """)
+            text_label.setStyleSheet("color: #888888; background: transparent;")
+
+        return tab
+
     def create_left_panel(self):
+        """Create the enhanced left sidebar panel"""
         left_widget = QWidget()
+        left_widget.setFixedWidth(280)
+        left_widget.setStyleSheet("""
+            QWidget {
+                background: #1a1a1d;
+                border-right: 1px solid rgba(255, 255, 255, 0.08);
+            }
+        """)
+
         left_layout = QVBoxLayout(left_widget)
-        left_layout.setContentsMargins(20, 20, 20, 20)
+        left_layout.setContentsMargins(16, 20, 16, 20)
         left_layout.setSpacing(20)
 
-        # Folders section
-        folders_section = self.create_folders_section()
+        # Security Health Section
+        security_section = self.create_security_health_section()
+        left_layout.addWidget(security_section)
+
+        # Folders Section
+        folders_section = self.create_enhanced_folders_section()
         left_layout.addWidget(folders_section)
 
-        left_layout.addStretch()
+        # Quick Actions Section
+        quick_actions = self.create_quick_actions_section()
+        left_layout.addWidget(quick_actions)
 
+        # Recent Activity Section
+        recent_activity = self.create_recent_activity_section()
+        left_layout.addWidget(recent_activity)
+
+        left_layout.addStretch()
         return left_widget
+
+    def create_security_health_section(self):
+        """Create the security health status panel"""
+        section = QWidget()
+        section.setFixedHeight(80)  # Fixed height to match mockup
+        section.setStyleSheet("""
+            QWidget {
+                background: #2d2d30;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+            }
+        """)
+
+        layout = QVBoxLayout(section)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(4)
+
+        # Header row
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(0)
+
+        title = QLabel("Security Health")
+        title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        title.setStyleSheet("color: #ffffff; background: transparent;")
+
+        # Status with colored indicator
+        vault_data = getattr(self, 'vault_data', {}).get('data', {})
+        has_issues = self.check_security_issues(vault_data)
+
+        status_text = "Needs Attention" if has_issues else "Good"
+        status_color = "#ff9500" if has_issues else "#4CAF50"
+
+        status_label = QLabel(status_text)
+        status_label.setStyleSheet(f"""
+            color: {status_color};
+            font-size: 11px;
+            font-weight: 600;
+            background: transparent;
+        """)
+
+        header_layout.addWidget(title)
+        header_layout.addStretch()
+        header_layout.addWidget(status_label)
+        layout.addLayout(header_layout)
+
+        # Status description
+        if has_issues:
+            issues = self.get_security_issues(vault_data)
+            desc_text = f"{len(issues)} issues found"
+        else:
+            desc_text = "All security checks passed"
+
+        desc_label = QLabel(desc_text)
+        desc_label.setStyleSheet("color: #888888; font-size: 11px; background: transparent;")
+        layout.addWidget(desc_label)
+
+        return section
+
+    def create_enhanced_folders_section(self):
+        """Create the enhanced folders section"""
+        section = QWidget()
+        layout = QVBoxLayout(section)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
+
+        # Header with add button
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(0)
+
+        folders_title = QLabel("FOLDERS")
+        folders_title.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        folders_title.setStyleSheet("color: #666666; background: transparent; letter-spacing: 0.5px;")
+
+        add_folder_btn = QPushButton("+")
+        add_folder_btn.setFixedSize(20, 20)
+        add_folder_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 10px;
+                color: #ffffff;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+        """)
+        add_folder_btn.clicked.connect(self.add_folder)
+
+        header_layout.addWidget(folders_title)
+        header_layout.addStretch()
+        header_layout.addWidget(add_folder_btn)
+        layout.addLayout(header_layout)
+
+        # Folders container
+        folders_container = QWidget()
+        self.folders_list_layout = QVBoxLayout(folders_container)
+        self.folders_list_layout.setContentsMargins(0, 0, 0, 0)
+        self.folders_list_layout.setSpacing(2)
+
+        # Store reference for updates
+        self.folders_container = folders_container
+
+        layout.addWidget(folders_container)
+        return section
+
+    def create_folder_list_item(self, folder_name, password_count, is_selected=False):
+        """Create a folder list item with proper styling"""
+        item_container = QWidget()
+        item_container.setFixedHeight(44)
+
+        # Main layout for the container
+        container_layout = QHBoxLayout(item_container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
+
+        # The clickable button
+        item = QPushButton()
+        item.setFixedHeight(44)
+        item.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        # Button content layout
+        button_layout = QHBoxLayout(item)
+        button_layout.setContentsMargins(12, 0, 12, 0)
+        button_layout.setSpacing(12)
+
+        # Folder icon with colored background
+        icon_container = QWidget()
+        icon_container.setFixedSize(28, 28)
+
+        # Icon colors based on folder name
+        icon_colors = {
+            "Gaming": "#ff6b6b", "Battle.net": "#ff6b6b",
+            "Banking": "#ffa726", "Social Media": "#42a5f5",
+            "Work": "#ab47bc", "Personal": "#66bb6a"
+        }
+
+        bg_color = icon_colors.get(folder_name, "#666666")
+        icon_container.setStyleSheet(f"""
+            background: {bg_color};
+            border-radius: 6px;
+        """)
+
+        icon_layout = QHBoxLayout(icon_container)
+        icon_layout.setContentsMargins(0, 0, 0, 0)
+
+        icon_label = QLabel("📁")
+        icon_label.setStyleSheet("background: transparent; font-size: 14px;")
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_layout.addWidget(icon_label)
+
+        # Folder info
+        info_layout = QVBoxLayout()
+        info_layout.setSpacing(2)
+        info_layout.setContentsMargins(0, 0, 0, 0)
+
+        name_label = QLabel(folder_name)
+        name_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
+        name_label.setStyleSheet("color: #ffffff; background: transparent;")
+
+        count_label = QLabel(f"{password_count} passwords")
+        count_label.setFont(QFont("Segoe UI", 9))
+        count_label.setStyleSheet("color: #888888; background: transparent;")
+
+        info_layout.addWidget(name_label)
+        info_layout.addWidget(count_label)
+
+        button_layout.addWidget(icon_container)
+        button_layout.addLayout(info_layout, 1)
+
+        # Selection indicator
+        indicator = QWidget()
+        indicator.setFixedSize(3, 24)
+
+        if is_selected:
+            indicator.setStyleSheet("background: #4CAF50; border-radius: 1px;")
+            item.setStyleSheet("""
+                QPushButton {
+                    background: rgba(76, 175, 80, 0.15);
+                    border: none;
+                    border-radius: 6px;
+                    text-align: left;
+                }
+                QPushButton:hover {
+                    background: rgba(76, 175, 80, 0.2);
+                }
+            """)
+        else:
+            indicator.setStyleSheet("background: transparent;")
+            item.setStyleSheet("""
+                QPushButton {
+                    background: transparent;
+                    border: none;
+                    border-radius: 6px;
+                    text-align: left;
+                }
+                QPushButton:hover {
+                    background: rgba(255, 255, 255, 0.05);
+                }
+            """)
+
+        button_layout.addWidget(indicator)
+
+        # Connect click handler
+        item.clicked.connect(lambda: self.select_folder(folder_name))
+
+        container_layout.addWidget(item)
+
+        return item_container
+
+    def create_quick_actions_section(self):
+        """Create the quick actions section"""
+        section = QWidget()
+        layout = QVBoxLayout(section)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
+
+        # Title
+        title = QLabel("Quick Actions")
+        title.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        title.setStyleSheet("color: #666666; background: transparent; letter-spacing: 0.5px;")
+        layout.addWidget(title)
+
+        # Action buttons container
+        actions_container = QWidget()
+        actions_layout = QVBoxLayout(actions_container)
+        actions_layout.setContentsMargins(0, 0, 0, 0)
+        actions_layout.setSpacing(4)
+
+        # Action buttons
+        actions = [
+            ("➕", "Add Password", self.add_entry_to_current_folder),
+            ("📁", "New Folder", self.add_folder),
+            ("📥", "Import Passwords", self.show_import_dialog)
+        ]
+
+        for icon, text, handler in actions:
+            btn = self.create_quick_action_button(icon, text, handler)
+            actions_layout.addWidget(btn)
+
+        layout.addWidget(actions_container)
+        return section
+
+    def create_quick_action_button(self, icon, text, handler):
+        """Create a quick action button with proper styling"""
+        btn = QPushButton()
+        btn.setFixedHeight(40)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        btn_layout = QHBoxLayout(btn)
+        btn_layout.setContentsMargins(12, 0, 12, 0)
+        btn_layout.setSpacing(12)
+
+        icon_label = QLabel(icon)
+        icon_label.setFixedSize(16, 16)
+        icon_label.setStyleSheet("background: transparent; font-size: 14px;")
+
+        text_label = QLabel(text)
+        text_label.setFont(QFont("Segoe UI", 10))
+        text_label.setStyleSheet("color: #ffffff; background: transparent;")
+
+        btn_layout.addWidget(icon_label)
+        btn_layout.addWidget(text_label, 1)
+
+        btn.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            QPushButton:pressed {
+                background: rgba(255, 255, 255, 0.08);
+            }
+        """)
+
+        btn.clicked.connect(handler)
+        return btn
+
+    def create_recent_activity_section(self):
+        """Create recent activity section"""
+        section = QWidget()
+        layout = QVBoxLayout(section)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
+
+        # Title
+        title = QLabel("Recent Activity")
+        title.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        title.setStyleSheet("color: #666666; background: transparent; letter-spacing: 0.5px;")
+        layout.addWidget(title)
+
+        # Activity container
+        activity_container = QWidget()
+        activity_layout = QVBoxLayout(activity_container)
+        activity_layout.setContentsMargins(0, 0, 0, 0)
+        activity_layout.setSpacing(8)
+
+        # Activity items
+        activities = [
+            ("Steam password updated", "2 min ago"),
+            ("Alice shared Netflix", "1 hour ago"),
+            ("New folder created", "Yesterday")
+        ]
+
+        for activity, time_ago in activities:
+            item = self.create_activity_item(activity, time_ago)
+            activity_layout.addWidget(item)
+
+        layout.addWidget(activity_container)
+        return section
+
+    def create_activity_item(self, activity, time_ago):
+        """Create an activity item with dot indicator"""
+        item = QWidget()
+        item.setFixedHeight(32)
+
+        layout = QHBoxLayout(item)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+
+        # Green dot indicator
+        dot = QLabel("●")
+        dot.setFixedSize(8, 8)
+        dot.setStyleSheet("color: #4CAF50; font-size: 8px; background: transparent;")
+
+        # Activity info
+        info_layout = QVBoxLayout()
+        info_layout.setSpacing(0)
+        info_layout.setContentsMargins(0, 0, 0, 0)
+
+        activity_label = QLabel(activity)
+        activity_label.setFont(QFont("Segoe UI", 10))
+        activity_label.setStyleSheet("color: #ffffff; background: transparent;")
+
+        time_label = QLabel(time_ago)
+        time_label.setFont(QFont("Segoe UI", 8))
+        time_label.setStyleSheet("color: #888888; background: transparent;")
+
+        info_layout.addWidget(activity_label)
+        info_layout.addWidget(time_label)
+
+        layout.addWidget(dot)
+        layout.addLayout(info_layout, 1)
+
+        return item
+
+    # Update the refresh method to use the new styling
+    def refresh_folders_enhanced(self):
+        """Enhanced folder refresh for list-style display"""
+        # Clear existing folder items
+        if hasattr(self, 'folders_list_layout'):
+            while self.folders_list_layout.count():
+                child = self.folders_list_layout.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
+
+            self.folder_buttons.clear()
+
+            # Get vault folders
+            vault_folders = list(self.vault_data.get("data", {}).keys())
+
+            if not vault_folders:
+                # Show message if no folders
+                no_folders_label = QLabel("No folders yet")
+                no_folders_label.setStyleSheet("color: #888888; font-size: 11px; padding: 12px;")
+                no_folders_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.folders_list_layout.addWidget(no_folders_label)
+                return
+
+            # Add folder items
+            for folder_name in vault_folders:
+                folder_data = self.vault_data["data"][folder_name]
+                password_count = len(folder_data.get("entries", []))
+                is_selected = (folder_name == self.selected_folder)
+
+                folder_item = self.create_folder_list_item(folder_name, password_count, is_selected)
+                self.folder_buttons[folder_name] = folder_item
+                self.folders_list_layout.addWidget(folder_item)
+
+    # Helper methods for security analysis (simplified versions)
+    def check_security_issues(self, vault_data):
+        """Quick check for security issues"""
+        if not vault_data:
+            return False
+
+        # Simple check - count entries with weak passwords
+        weak_count = 0
+        for folder_name, folder_data in vault_data.items():
+            entries = folder_data.get("entries", [])
+            for entry in entries:
+                for field in ['Password', 'password']:
+                    if field in entry:
+                        password = entry[field]
+                        if password and len(password) < 8:
+                            weak_count += 1
+                        break
+
+        return weak_count > 0
+
+    def get_security_issues(self, vault_data):
+        """Get basic security issues"""
+        issues = []
+
+        weak_count = 0
+        for folder_name, folder_data in vault_data.items():
+            entries = folder_data.get("entries", [])
+            for entry in entries:
+                for field in ['Password', 'password']:
+                    if field in entry:
+                        password = entry[field]
+                        if password and len(password) < 8:
+                            weak_count += 1
+                        break
+
+        if weak_count > 0:
+            issues.append({
+                'severity': 'high',
+                'message': f'{weak_count} weak passwords found'
+            })
+
+        return issues
+
+    # Add these methods to handle the quick actions
+    def add_entry_to_current_folder(self):
+        """Add entry to currently selected folder"""
+        if not self.selected_folder:
+            # Get first folder if none selected
+            vault_folders = list(self.vault_data.get("data", {}).keys())
+            if vault_folders:
+                self.select_folder(vault_folders[0])
+            else:
+                # No folders exist, create one first
+                self.add_folder()
+                return
+
+        self.add_entry_to_folder()
+
+    def show_import_dialog(self):
+        """Show import dialog placeholder"""
+        from gui.widgets.modern_widgets import ModernDialog, ModernButton
+
+        dialog = ModernDialog(self, "Import Passwords")
+        dialog.setFixedSize(400, 200)
+
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        header_label = QLabel("Import Feature")
+        header_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #4CAF50;")
+        layout.addWidget(header_label)
+
+        desc_label = QLabel("Import from other password managers coming soon!")
+        desc_label.setStyleSheet("color: #ffffff; font-size: 12px;")
+        layout.addWidget(desc_label)
+
+        layout.addStretch()
+
+        close_btn = ModernButton("Close", primary=True)
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+
+        dialog.exec()
 
     def create_folders_section(self):
         group = QGroupBox("📁 FOLDERS")
@@ -166,17 +830,519 @@ class VaultWindow(QWidget):
 
         return group
 
+    # Enhanced right panel with card-based password layout
+
     def create_right_panel(self):
+        """Create the main content area with card layout"""
         right_widget = QWidget()
+        right_widget.setStyleSheet("""
+            QWidget {
+                background: #2d2d30;
+            }
+        """)
+
         right_layout = QVBoxLayout(right_widget)
-        right_layout.setContentsMargins(20, 20, 20, 20)
+        right_layout.setContentsMargins(24, 24, 24, 24)
         right_layout.setSpacing(20)
 
-        # Entries section
-        entries_section = self.create_entries_section()
-        right_layout.addWidget(entries_section)
+        # Header section
+        header_section = self.create_entries_header()
+        right_layout.addWidget(header_section)
 
+        # Password cards container
+        self.cards_container = QWidget()
+        self.cards_layout = QVBoxLayout(self.cards_container)
+        self.cards_layout.setContentsMargins(0, 0, 0, 0)
+        self.cards_layout.setSpacing(12)
+
+        # Scroll area for password cards
+        scroll_area = QScrollArea()
+        scroll_area.setWidget(self.cards_container)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background: transparent;
+            }
+            QScrollBar:vertical {
+                background: rgba(255, 255, 255, 0.05);
+                width: 8px;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 4px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+        """)
+
+        right_layout.addWidget(scroll_area)
         return right_widget
+
+    def create_nav_tab(self, icon, text, is_active=False):
+        """Create a navigation tab button"""
+        tab = QPushButton()
+        tab.setFixedHeight(36)
+        tab.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        tab_layout = QHBoxLayout(tab)
+        tab_layout.setContentsMargins(12, 0, 12, 0)
+        tab_layout.setSpacing(6)
+
+        icon_label = QLabel(icon)
+        icon_label.setStyleSheet("background: transparent; font-size: 14px;")
+
+        text_label = QLabel(text)
+        text_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
+        text_label.setStyleSheet("background: transparent;")
+
+        tab_layout.addWidget(icon_label)
+        tab_layout.addWidget(text_label)
+
+        if is_active:
+            tab.setStyleSheet("""
+                QPushButton {
+                    background: rgba(76, 175, 80, 0.15);
+                    border: none;
+                    border-radius: 8px;
+                    color: #4CAF50;
+                }
+            """)
+            text_label.setStyleSheet("color: #4CAF50; background: transparent;")
+        else:
+            tab.setStyleSheet("""
+                QPushButton {
+                    background: transparent;
+                    border: none;
+                    border-radius: 8px;
+                    color: #888888;
+                }
+                QPushButton:hover {
+                    background: rgba(255, 255, 255, 0.05);
+                    color: #ffffff;
+                }
+            """)
+            text_label.setStyleSheet("color: #888888; background: transparent;")
+
+        return tab
+
+    def create_password_card(self, entry_idx, entry, schema):
+        """Create password card that matches mockup exactly"""
+        card = QWidget()
+        card.setFixedHeight(92)  # Slightly taller to match mockup
+        card.setStyleSheet("""
+            QWidget {
+                background: #3a3a3d;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 12px;
+            }
+            QWidget:hover {
+                background: #404043;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+            }
+        """)
+
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(16)
+
+        # Expand arrow (collapsible indicator)
+        expand_arrow = QLabel("▶")
+        expand_arrow.setFixedSize(16, 16)
+        expand_arrow.setStyleSheet("color: #666666; font-size: 12px; background: transparent;")
+
+        # Entry info
+        info_layout = QVBoxLayout()
+        info_layout.setSpacing(4)
+
+        # Title
+        title = self.get_entry_display_name(entry, schema)
+        title_label = QLabel(title)
+        title_label.setFont(QFont("Segoe UI", 15, QFont.Weight.Medium))
+        title_label.setStyleSheet("color: #ffffff; background: transparent;")
+
+        # Username/email
+        username = self.get_entry_username(entry, schema)
+        username_label = QLabel(username if username else "No username")
+        username_label.setFont(QFont("Segoe UI", 12))
+        username_label.setStyleSheet("color: #888888; background: transparent;")
+
+        info_layout.addWidget(title_label)
+        info_layout.addWidget(username_label)
+
+        layout.addWidget(expand_arrow)
+        layout.addLayout(info_layout, 1)
+
+        # Action buttons (smaller, more compact)
+        actions_layout = QHBoxLayout()
+        actions_layout.setSpacing(8)
+
+        # Copy button
+        copy_btn = QPushButton("Copy")
+        copy_btn.setFixedSize(50, 28)
+        copy_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 6px;
+                color: #ffffff;
+                font-size: 10px;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.12);
+            }
+        """)
+
+        password = self.get_entry_password(entry, schema)
+        copy_btn.clicked.connect(lambda: self.copy_to_clipboard(password))
+
+        # Edit button (icon only)
+        edit_btn = QPushButton("✏️")
+        edit_btn.setFixedSize(28, 28)
+        edit_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 6px;
+                color: #ffffff;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.12);
+            }
+        """)
+        edit_btn.clicked.connect(lambda: self.edit_entry(entry_idx, entry))
+
+        # Delete button (icon only, red)
+        delete_btn = QPushButton("🗑️")
+        delete_btn.setFixedSize(28, 28)
+        delete_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 71, 87, 0.1);
+                border: 1px solid rgba(255, 71, 87, 0.3);
+                border-radius: 6px;
+                color: #ff4757;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 71, 87, 0.15);
+            }
+        """)
+        delete_btn.clicked.connect(lambda: self.delete_entry(entry_idx))
+
+        actions_layout.addWidget(copy_btn)
+        actions_layout.addWidget(edit_btn)
+        actions_layout.addWidget(delete_btn)
+
+        layout.addLayout(actions_layout)
+
+        return card
+
+    def get_entry_username(self, entry, schema):
+        """Extract username/email from entry"""
+        username_fields = ['Username', 'username', 'User', 'user', 'Email', 'email']
+        for field in username_fields:
+            if field in entry and entry[field]:
+                return entry[field]
+        return None
+
+    def get_entry_password(self, entry, schema):
+        """Extract password from entry"""
+        password_fields = ['Password', 'password', 'Pass', 'pass']
+        for field in password_fields:
+            if field in entry and entry[field]:
+                return entry[field]
+        return ""
+
+    def refresh_entries_cards(self):
+        """Refresh entries using card layout with proper header"""
+        # Clear existing cards
+        while self.cards_layout.count():
+            child = self.cards_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+        if not self.selected_folder:
+            # Update header for no selection
+            self.folder_title.setText("Select a Folder")
+
+            # Show "no folder selected" message
+            no_folder_card = self.create_no_folder_message()
+            self.cards_layout.addWidget(no_folder_card)
+            return
+
+        # Get folder data
+        folder_data = self.vault_data.get("data", {}).get(self.selected_folder)
+        if not folder_data:
+            self.folder_title.setText("Error")
+            error_card = self.create_error_message(f"Folder '{self.selected_folder}' not found")
+            self.cards_layout.addWidget(error_card)
+            return
+
+        # Update header with folder info
+        entries = folder_data.get("entries", [])
+        entry_count = len(entries)
+
+        # Update header to match mockup style
+        self.folder_title.setText(self.selected_folder)
+        self.folder_subtitle.setText(f"{entry_count} passwords • Last updated 2 days ago")
+
+        # Get schema
+        schema = folder_data.get("schema", ["Title", "Username", "Password"])
+
+        if not entries:
+            # Show add new entry button
+            no_entries_card = self.create_no_entries_message()
+            self.cards_layout.addWidget(no_entries_card)
+        else:
+            # Add password cards
+            for entry_idx, entry in enumerate(entries):
+                card = self.create_password_card(entry_idx, entry, schema)
+                self.cards_layout.addWidget(card)
+
+        # Add stretch to push cards to top
+        self.cards_layout.addStretch()
+
+    def create_entries_header(self):
+        """Create header that matches mockup style"""
+        header = QWidget()
+        header.setFixedHeight(80)
+
+        layout = QHBoxLayout(header)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(16)
+
+        # Left side - Folder icon and title
+        title_layout = QHBoxLayout()
+        title_layout.setSpacing(12)
+
+        # Document icon (matches mockup)
+        folder_icon = QLabel("📄")
+        folder_icon.setStyleSheet("font-size: 24px; background: transparent;")
+
+        # Title and subtitle
+        title_info = QVBoxLayout()
+        title_info.setSpacing(4)
+
+        # Main title with "ENTRIES IN:" prefix
+        title_container = QHBoxLayout()
+        title_container.setSpacing(8)
+
+        entries_prefix = QLabel("ENTRIES IN:")
+        entries_prefix.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        entries_prefix.setStyleSheet("color: #666666; background: transparent; letter-spacing: 0.5px;")
+
+        self.folder_title = QLabel("Select a Folder")
+        self.folder_title.setFont(QFont("Segoe UI", 24, QFont.Weight.Bold))
+        self.folder_title.setStyleSheet("color: #ffffff; background: transparent;")
+
+        title_container.addWidget(entries_prefix)
+        title_container.addWidget(self.folder_title)
+        title_container.addStretch()
+
+        # Subtitle
+        self.folder_subtitle = QLabel("Choose a folder to view passwords")
+        self.folder_subtitle.setFont(QFont("Segoe UI", 12))
+        self.folder_subtitle.setStyleSheet("color: #888888; background: transparent;")
+
+        title_info.addLayout(title_container)
+        title_info.addWidget(self.folder_subtitle)
+
+        title_layout.addWidget(folder_icon)
+        title_layout.addLayout(title_info)
+
+        layout.addLayout(title_layout)
+        layout.addStretch()
+
+        # Right side - Action buttons
+        buttons_layout = QHBoxLayout()
+        buttons_layout.setSpacing(12)
+
+        # Edit Folder button
+        edit_folder_btn = QPushButton("✏️ Edit Folder")
+        edit_folder_btn.setFixedHeight(40)
+        edit_folder_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 8px;
+                color: #ffffff;
+                font-size: 12px;
+                font-weight: 500;
+                padding: 0px 16px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.12);
+            }
+        """)
+        edit_folder_btn.clicked.connect(self.edit_folder)
+
+        # Delete Folder button
+        delete_folder_btn = QPushButton("🗑️ Delete Folder")
+        delete_folder_btn.setFixedHeight(40)
+        delete_folder_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 71, 87, 0.1);
+                border: 1px solid rgba(255, 71, 87, 0.3);
+                border-radius: 8px;
+                color: #ff4757;
+                font-size: 12px;
+                font-weight: 500;
+                padding: 0px 16px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 71, 87, 0.15);
+            }
+        """)
+        delete_folder_btn.clicked.connect(self.delete_folder)
+
+        # Add Password button
+        add_password_btn = QPushButton("Add Password")
+        add_password_btn.setFixedHeight(40)
+        add_password_btn.setStyleSheet("""
+            QPushButton {
+                background: #4CAF50;
+                border: none;
+                border-radius: 8px;
+                color: white;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 0px 24px;
+            }
+            QPushButton:hover {
+                background: #45a049;
+            }
+        """)
+        add_password_btn.clicked.connect(self.add_entry_to_folder)
+
+        buttons_layout.addWidget(edit_folder_btn)
+        buttons_layout.addWidget(delete_folder_btn)
+        buttons_layout.addWidget(add_password_btn)
+
+        layout.addLayout(buttons_layout)
+
+        return header
+
+    def create_no_folder_message(self):
+        """Create message widget when no folder is selected"""
+        message_card = QWidget()
+        message_card.setFixedHeight(120)
+        message_card.setStyleSheet("""
+            QWidget {
+                background: #3a3a3d;
+                border: 2px dashed rgba(255, 255, 255, 0.15);
+                border-radius: 12px;
+            }
+        """)
+
+        layout = QVBoxLayout(message_card)
+        layout.setSpacing(8)
+
+        icon = QLabel("📁")
+        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon.setStyleSheet("font-size: 32px; background: transparent;")
+
+        title = QLabel("No Folder Selected")
+        title.setFont(QFont("Segoe UI", 14, QFont.Weight.Medium))
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("color: #ffffff; background: transparent;")
+
+        subtitle = QLabel("Choose a folder from the sidebar to view your passwords")
+        subtitle.setFont(QFont("Segoe UI", 11))
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setStyleSheet("color: #888888; background: transparent;")
+
+        layout.addWidget(icon)
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
+
+        return message_card
+
+    def create_no_entries_message(self):
+        """Updated no entries message to match mockup"""
+        message_card = QWidget()
+        message_card.setFixedHeight(160)
+        message_card.setStyleSheet("""
+            QWidget {
+                background: transparent;
+            }
+        """)
+
+        layout = QVBoxLayout(message_card)
+        layout.setSpacing(16)
+
+        # Large add button in center
+        add_btn = QPushButton("+ ADD NEW ENTRY")
+        add_btn.setFixedHeight(48)
+        add_btn.setFixedWidth(200)
+        add_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: 2px dashed rgba(76, 175, 80, 0.5);
+                border-radius: 12px;
+                color: #4CAF50;
+                font-size: 13px;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+            }
+            QPushButton:hover {
+                background: rgba(76, 175, 80, 0.05);
+                border: 2px dashed rgba(76, 175, 80, 0.7);
+            }
+        """)
+        add_btn.clicked.connect(self.add_entry_to_folder)
+
+        # Center the button
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(add_btn)
+        button_layout.addStretch()
+
+        layout.addStretch()
+        layout.addLayout(button_layout)
+        layout.addStretch()
+
+        return message_card
+
+    def create_error_message(self, error_text):
+        """Create error message widget"""
+        error_card = QWidget()
+        error_card.setFixedHeight(100)
+        error_card.setStyleSheet("""
+            QWidget {
+                background: rgba(255, 71, 87, 0.1);
+                border: 1px solid rgba(255, 71, 87, 0.3);
+                border-radius: 12px;
+            }
+        """)
+
+        layout = QVBoxLayout(error_card)
+        layout.setSpacing(8)
+
+        icon = QLabel("⚠️")
+        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon.setStyleSheet("font-size: 24px; background: transparent;")
+
+        text = QLabel(error_text)
+        text.setFont(QFont("Segoe UI", 12))
+        text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        text.setStyleSheet("color: #ff4757; background: transparent;")
+
+        layout.addWidget(icon)
+        layout.addWidget(text)
+
+        return error_card
+
+    # Update the main refresh method to use cards
+    def refresh_entries(self):
+        """Main method to refresh entries - now uses card layout"""
+        self.refresh_entries_cards()
 
     def create_entries_section(self):
         self.entries_section = QGroupBox("📄 ENTRIES")
@@ -283,8 +1449,8 @@ class VaultWindow(QWidget):
         update_vault_stats(vault_data)
 
         # Refresh the UI
-        self.refresh_folders()
-        self.refresh_entries()
+        self.refresh_folders_enhanced()
+        self.refresh_entries_cards()
 
         return True
 
@@ -468,7 +1634,7 @@ class VaultWindow(QWidget):
             self.folder_buttons[folder_name].setStyleSheet(self.get_folder_button_style(True))
 
         # Refresh entries
-        self.refresh_entries()
+        self.refresh_entries_cards()
 
     def create_entry_widget(self, entry_idx, entry, schema):
         # Get display name
@@ -774,7 +1940,7 @@ class VaultWindow(QWidget):
             update_vault_stats(self.vault_data["data"])
 
             # Refresh UI
-            self.refresh_entries()
+            self.refresh_entries_cards()
             dialog.accept()
 
         add_btn.clicked.connect(confirm_add)
@@ -878,7 +2044,7 @@ class VaultWindow(QWidget):
             update_vault_stats(self.vault_data["data"])
 
             # Refresh UI
-            self.refresh_entries()
+            self.refresh_entries_cards()
             dialog.accept()
 
         save_btn.clicked.connect(confirm_edit)
@@ -939,7 +2105,7 @@ class VaultWindow(QWidget):
             update_vault_stats(self.vault_data["data"])
 
             # Refresh UI
-            self.refresh_entries()
+            self.refresh_entries_cards()
             dialog.accept()
 
         delete_btn.clicked.connect(confirm_delete)
@@ -1077,8 +2243,8 @@ class VaultWindow(QWidget):
             save_vault(self.vault_data["data"], self.vault_key)
 
             # Update UI
-            self.refresh_folders()
-            self.refresh_entries()
+            self.refresh_folders_enhanced()
+            self.refresh_entries_cards()
 
             dialog.accept()
 
@@ -1153,8 +2319,8 @@ class VaultWindow(QWidget):
 
             # Reset selection and refresh UI
             self.selected_folder = None
-            self.refresh_folders()
-            self.refresh_entries()
+            self.refresh_folders_enhanced()
+            self.refresh_entries_cards()
 
             dialog.accept()
 
@@ -2139,7 +3305,7 @@ class FolderCreationDialog(ModernDialog):
         from core.vault_manager import load_vault
         updated_vault_data = load_vault(self.parent.vault_key)
         self.parent.vault_data["data"] = updated_vault_data
-        self.parent.refresh_folders()
+        self.parent.refresh_folders_enhanced()
 
         self.accept()
 
