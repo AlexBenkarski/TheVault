@@ -29,16 +29,6 @@ def get_discord_webhook():
     except KeyError:
         return None
 
-
-def get_firebase_credentials():
-    try:
-        if os.path.exists("vaultfirebase.json"):
-            return "vaultfirebase.json"
-        return None
-    except Exception as e:
-        print(f"Error loading Firebase credentials: {e}")
-        return None
-
 def load_secrets():
     global CACHED_SECRETS
     loaded_services = []

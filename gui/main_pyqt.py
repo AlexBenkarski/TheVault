@@ -663,7 +663,7 @@ class TheVaultApp(QMainWindow):
             from gui.analytics_manager import get_or_create_manager
             manager = get_or_create_manager()
             user_id = manager.analytics_data.get("vault_id", "unknown")
-            version = manager.analytics_data.get("version", "unknown")
+            version = get_current_version()
             os_info = manager.analytics_data.get("os", "unknown")
 
             # Create Discord message
@@ -1041,7 +1041,7 @@ class TheVaultApp(QMainWindow):
         if hasattr(self, 'session_start') and self.session_start:
             duration = (time.time() - self.session_start) / 60
             try:
-                from gui.analytics_manager import get_or_create_manager, update_metric, send_to_firebase
+                from gui.analytics_manager import get_or_create_manager, update_metric, send_to_oracle
 
                 manager = get_or_create_manager()
                 current_avg = manager.analytics_data["install_metrics"]["avg_session_length_minutes"]
@@ -1049,7 +1049,7 @@ class TheVaultApp(QMainWindow):
 
                 new_avg = (current_avg * (total_opens - 1) + duration) / total_opens
                 update_metric("install_metrics.avg_session_length_minutes", new_avg)
-                send_to_firebase()
+                send_to_oracle()
                 self.session_start = None
 
             except Exception as e:
@@ -1136,7 +1136,7 @@ def start_app_with_dev_cli():
 
     # Check for unsent data from previous session
     if analytics_manager.analytics_data.get("needs_send", False):
-        success = analytics_manager.send_to_firebase()
+        success = analytics_manager.send_to_oracle()
         if success:
             analytics_manager.mark_as_sent()
 
@@ -1248,7 +1248,7 @@ def start_app():
 
         # Check for unsent data
         if manager and manager.analytics_data.get("needs_send", False):
-            success = manager.send_to_firebase()
+            success = manager.send_to_oracle()
             if success:
                 manager.mark_as_sent()
 

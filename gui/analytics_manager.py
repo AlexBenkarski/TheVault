@@ -5,7 +5,6 @@ import platform
 import sys
 from datetime import datetime, timedelta
 from .update_manager import get_current_version
-from secrets_encryption import get_firebase_credentials
 
 
 def get_analytics_file_path():
@@ -95,32 +94,28 @@ class AnalyticsManager:
             import traceback
             raise
 
-    def send_to_firebase(self):
+    def send_to_oracle():
         try:
-            import firebase_admin
-            from firebase_admin import credentials, firestore
-
-            # Get Firebase config
-            firebase_config = get_firebase_credentials()
-            if not firebase_config:
-                print("Firebase credentials not available")
+            manager = get_or_create_manager()
+            if not manager or not manager.analytics_data.get("consent_given", False):
                 return False
 
-            # Initialize Firebase
-            if not firebase_admin._apps:
-                cred = credentials.Certificate(firebase_config)
-                firebase_admin.initialize_app(cred)
+            import requests
+            response = requests.post(
+                "http://141.148.36.8/analytics",
+                json=manager.analytics_data,
+                timeout=10
+            )
 
-            db = firestore.client()
-
-            # Send complete analytics data
-            db.collection("users").document(self.analytics_data["vault_id"]).set(self.analytics_data)
-
-            print("Analytics sent to Firebase successfully")
-            return True
+            if response.status_code == 200:
+                print("Analytics sent to Oracle successfully")
+                return True
+            else:
+                print(f"Oracle send failed: {response.status_code}")
+                return False
 
         except Exception as e:
-            print(f"Firebase send failed: {e}")
+            print(f"Oracle send failed: {e}")
             return False
 
     def save_data_locally(self):
@@ -185,7 +180,7 @@ def update_metric(metric_name, value):
         manager.update_metric(metric_name, value)
 
 
-def send_to_firebase():
+def send_to_oracle():
     manager = get_or_create_manager()
     if not manager:
         return False
@@ -195,7 +190,7 @@ def send_to_firebase():
         print("User declined analytics - skipping send")
         return False
 
-    return manager.send_to_firebase()
+    return manager.send_to_oracle()
 
 
 def mark_as_sent():
@@ -317,68 +312,6 @@ def should_collect_analytics():
         return False
     except Exception as e:
         return False
-
-
-def send_firebase_consent_ping(consent_given):
-    """Send one-time consent ping to Firebase regardless of user choice"""
-    temp_file_path = None
-
-    try:
-        import firebase_admin
-        from firebase_admin import credentials, firestore
-
-        firebase_config = get_firebase_credentials()
-        temp_file_path = firebase_config
-
-        if not firebase_config:
-            return False
-
-        try:
-            cred = credentials.Certificate(firebase_config)
-        except Exception as cred_error:
-            return False
-
-        try:
-            if not firebase_admin._apps:
-                firebase_admin.initialize_app(cred)
-        except Exception as init_error:
-            return False
-
-        try:
-            db = firestore.client()
-        except Exception as db_error:
-            return False
-
-        manager = get_or_create_manager()
-        if not manager:
-            return False
-
-        consent_data = {
-            "vault_id": manager.analytics_data["vault_id"],
-            "consent_given": consent_given,
-            "consent_timestamp": datetime.now().isoformat(),
-            "version": manager.analytics_data["version"],
-            "os": manager.analytics_data["os"]
-        }
-
-        try:
-            db.collection("consent").document(manager.analytics_data["vault_id"]).set(consent_data)
-            return True
-        except Exception as write_error:
-            return False
-
-    except ImportError as e:
-        return False
-    except Exception as e:
-        import traceback
-        return False
-    finally:
-        if temp_file_path and os.path.exists(temp_file_path):
-            try:
-                os.unlink(temp_file_path)
-            except Exception as cleanup_error:
-                pass
-
 
 def track_valorant_autofill_triggered():
     """Track when auto-fill overlay appears"""

@@ -10,42 +10,6 @@ BUILD_KEY_STRING = "VaultDesktop2025SecureSecretsKey!"
 BUILD_KEY = BUILD_KEY_STRING.encode('utf-8')[:32].ljust(32, b'\0')
 
 
-def encrypt_firebase_file(input_path="vaultfirebase.json", output_path="vaultfirebase.enc"):
-    """Encrypt Firebase credentials for production build"""
-    return encrypt_secrets_file(input_path, output_path)
-
-
-def get_firebase_credentials():
-    try:
-        import sys
-        import os
-        import json
-
-        if getattr(sys, 'frozen', False):
-            bundle_dir = sys._MEIPASS
-            firebase_enc_path = os.path.join(bundle_dir, 'vaultfirebase.enc')
-
-            if os.path.exists(firebase_enc_path):
-                with open(firebase_enc_path, 'r', encoding='utf-8') as f:
-                    encrypted_data = f.read()
-
-                firebase_data = decrypt_secrets_data(encrypted_data)
-                if firebase_data:
-                    import tempfile
-                    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp:
-                        json.dump(firebase_data, tmp)
-                        return tmp.name
-
-        if os.path.exists("vaultfirebase.json"):
-            return "vaultfirebase.json"
-
-        return None
-
-    except Exception as e:
-        print(f"Error loading Firebase credentials: {e}")
-        return None
-
-
 def encrypt_secrets_file(input_path, output_path):
     """Encrypt secrets.json for production build"""
     try:
