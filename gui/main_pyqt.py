@@ -425,7 +425,7 @@ class TheVaultApp(QMainWindow):
         main_widget.setLayout(main_layout)
 
         # Add title bar and content area
-        self._create_title_bar(main_layout)
+        # self._create_title_bar(main_layout)
 
         self.stacked_widget = QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
@@ -734,30 +734,17 @@ class TheVaultApp(QMainWindow):
     def _switch_to_auth_view(self, window):
         # Switch to login-sized window and hide vault controls
         self.resize_window(*self.login_size)
-        self.vault_controls.hide()
-        self.user_controls.hide()
         self.stacked_widget.setCurrentWidget(window)
 
     def show_vault(self, username, vault_data, vault_key):
-        # Resize to vault size and show controls
+        # Resize to vault size
         self.resize_window(*self.vault_size)
-        self.vault_controls.show()
-        self.user_controls.show()
-
-        # Update user button text and connect to settings
-        self.user_profile_btn.setText(f"👤 {username}")
-
-        try:
-            self.user_profile_btn.clicked.disconnect()
-            self.bug_report_btn.clicked.disconnect()
-        except:
-            pass
-        self.user_profile_btn.clicked.connect(self.vault_window.show_settings_dialog)
 
         # Load vault data and switch to vault view
         self.vault_window.load_vault_data(vault_data, username, vault_key)
         self.stacked_widget.setCurrentWidget(self.vault_window)
 
+        # Show analytics consent if needed
         from gui.analytics_manager import has_been_prompted_for_consent
         if not has_been_prompted_for_consent():
             from PyQt6.QtCore import QTimer

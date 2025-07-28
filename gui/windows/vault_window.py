@@ -59,7 +59,7 @@ class VaultWindow(QWidget):
         self.setLayout(main_layout)
 
     def create_simple_nav_bar(self):
-        """Create navigation bar that matches mockup exactly"""
+        """Navigation bar with proper Lucide-style icons"""
         nav_bar = QWidget()
         nav_bar.setFixedHeight(60)
         nav_bar.setStyleSheet("""
@@ -73,17 +73,28 @@ class VaultWindow(QWidget):
         layout.setContentsMargins(20, 0, 20, 0)
         layout.setSpacing(0)
 
-        # Left side - Logo and navigation
+        # Left side - Logo and navigation tabs
         left_layout = QHBoxLayout()
-        left_layout.setSpacing(32)
+        left_layout.setSpacing(30)
 
         # Logo and app name
         logo_layout = QHBoxLayout()
-        logo_layout.setSpacing(8)
+        logo_layout.setSpacing(10)
+        logo_layout.setContentsMargins(0, 0, 0, 0)
 
-        from gui.widgets.modern_widgets import LogoWidget
-        logo = LogoWidget()
-        logo.setFixedSize(24, 24)
+        # Simple V logo
+        logo = QLabel("V")
+        logo.setFixedSize(32, 32)
+        logo.setStyleSheet("""
+            QLabel {
+                background: #4CAF50;
+                border-radius: 8px;
+                color: white;
+                font-size: 18px;
+                font-weight: bold;
+            }
+        """)
+        logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         app_name = QLabel("TheVault")
         app_name.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
@@ -91,32 +102,31 @@ class VaultWindow(QWidget):
 
         logo_layout.addWidget(logo)
         logo_layout.addWidget(app_name)
+        left_layout.addLayout(logo_layout)
 
-        # Navigation tabs
-        nav_tabs = QHBoxLayout()
-        nav_tabs.setSpacing(24)
-
-        tabs = [
-            ("🔒", "Vault", True),  # Active tab
-            ("🛡️", "Security", False),
-            ("👥", "Friends", False),
-            ("📝", "Notes", False),
-            ("⚙️", "Settings", False)
+        # Navigation tabs with proper icons
+        tabs_data = [
+            ("lock", "Vault", True),  # Lock icon for vault
+            ("shield", "Security", False),  # Shield icon for security
+            ("users", "Friends", False),  # Users icon for friends
+            ("file-text", "Notes", False)  # File-text icon for notes
         ]
 
-        for icon, text, is_active in tabs:
-            tab = self.create_nav_tab(icon, text, is_active)
-            nav_tabs.addWidget(tab)
+        # Add tabs with Lucide-style icons
+        for i, (icon_name, text, is_active) in enumerate(tabs_data):
+            tab = self.create_nav_tab_with_icon(icon_name, text, is_active)
+            left_layout.addWidget(tab)
 
-        left_layout.addLayout(logo_layout)
-        left_layout.addLayout(nav_tabs)
+            # Add spacing between tabs
+            if i < len(tabs_data) - 1:
+                left_layout.addSpacing(15)
 
         layout.addLayout(left_layout)
         layout.addStretch()
 
-        # Right side - Search and user profile
+        # Right side - Search, notification, profile, window controls
         right_layout = QHBoxLayout()
-        right_layout.setSpacing(16)
+        right_layout.setSpacing(12)
 
         # Search bar
         search_bar = QLineEdit()
@@ -140,9 +150,10 @@ class VaultWindow(QWidget):
             }
         """)
 
-        # Notification bell
-        notification_btn = QPushButton("🔔")
+        # Notification bell with proper icon
+        notification_btn = QPushButton()
         notification_btn.setFixedSize(36, 36)
+        notification_btn.setText("🔔")  # We'll replace this with SVG later
         notification_btn.setStyleSheet("""
             QPushButton {
                 background: rgba(255, 255, 255, 0.05);
@@ -156,10 +167,10 @@ class VaultWindow(QWidget):
             }
         """)
 
-        # User profile button
-        user_btn = QPushButton("JD")
-        user_btn.setFixedSize(36, 36)
-        user_btn.setStyleSheet("""
+        # Profile button
+        profile_btn = QPushButton("JD")
+        profile_btn.setFixedSize(36, 36)
+        profile_btn.setStyleSheet("""
             QPushButton {
                 background: #4CAF50;
                 border: none;
@@ -172,27 +183,113 @@ class VaultWindow(QWidget):
                 background: #45a049;
             }
         """)
+        profile_btn.clicked.connect(self.show_settings_dialog)
+
+        # Window controls - FIX TO WORK WITH PROPER MAIN WINDOW
+        minimize_btn = QPushButton("−")
+        minimize_btn.setFixedSize(30, 30)
+        minimize_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.1);
+                border: none;
+                border-radius: 15px;
+                color: #ffffff;
+                font-size: 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+        """)
+
+        def minimize_window():
+            # Find the main window (TheVaultApp)
+            main_window = self.parent()
+            while main_window.parent():
+                main_window = main_window.parent()
+            main_window.showMinimized()
+
+        minimize_btn.clicked.connect(minimize_window)
+
+        close_btn = QPushButton("×")
+        close_btn.setFixedSize(30, 30)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.1);
+                border: none;
+                border-radius: 15px;
+                color: #ffffff;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: #ff4757;
+            }
+        """)
+
+        def close_window():
+            # Find the main window (TheVaultApp) and close it
+            main_window = self.parent()
+            while main_window.parent():
+                main_window = main_window.parent()
+            main_window.close()
+
+        close_btn.clicked.connect(close_window)
 
         right_layout.addWidget(search_bar)
         right_layout.addWidget(notification_btn)
-        right_layout.addWidget(user_btn)
+        right_layout.addWidget(profile_btn)
+        right_layout.addWidget(minimize_btn)
+        right_layout.addWidget(close_btn)
 
         layout.addLayout(right_layout)
 
+        # Window dragging
+        def on_nav_press(event):
+            if event.button() == Qt.MouseButton.LeftButton:
+                main_window = self.parent()
+                while main_window.parent():
+                    main_window = main_window.parent()
+                nav_bar.drag_start = event.globalPosition().toPoint()
+                nav_bar.main_window = main_window
+
+        def on_nav_move(event):
+            if (event.buttons() == Qt.MouseButton.LeftButton and
+                    hasattr(nav_bar, 'drag_start') and
+                    hasattr(nav_bar, 'main_window')):
+                diff = event.globalPosition().toPoint() - nav_bar.drag_start
+                nav_bar.main_window.move(nav_bar.main_window.pos() + diff)
+                nav_bar.drag_start = event.globalPosition().toPoint()
+
+        nav_bar.mousePressEvent = on_nav_press
+        nav_bar.mouseMoveEvent = on_nav_move
+
         return nav_bar
 
-    def create_nav_tab(self, icon, text, is_active=False):
-        """Create a navigation tab button"""
+    def create_nav_tab_with_icon(self, icon_name, text, is_active=False):
+        """Create a navigation tab with a proper Lucide-style icon"""
         tab = QPushButton()
         tab.setFixedHeight(36)
+        tab.setFixedWidth(85)
         tab.setCursor(Qt.CursorShape.PointingHandCursor)
 
+        # Create layout for icon and text
         tab_layout = QHBoxLayout(tab)
-        tab_layout.setContentsMargins(12, 0, 12, 0)
+        tab_layout.setContentsMargins(8, 0, 8, 0)
         tab_layout.setSpacing(6)
 
-        icon_label = QLabel(icon)
-        icon_label.setStyleSheet("background: transparent; font-size: 14px;")
+        # Icon - using Unicode symbols that look like Lucide icons
+        icon_symbols = {
+            "lock": "🔒",  # Will replace with proper SVG
+            "shield": "🛡",  # Will replace with proper SVG
+            "users": "👥",  # Will replace with proper SVG
+            "file-text": "📄"  # Will replace with proper SVG
+        }
+
+        icon_label = QLabel(icon_symbols.get(icon_name, "•"))
+        icon_label.setFixedSize(16, 16)
+        icon_label.setStyleSheet("background: transparent; font-size: 12px;")
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         text_label = QLabel(text)
         text_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
@@ -211,6 +308,7 @@ class VaultWindow(QWidget):
                 }
             """)
             text_label.setStyleSheet("color: #4CAF50; background: transparent;")
+            icon_label.setStyleSheet("color: #4CAF50; background: transparent; font-size: 12px;")
         else:
             tab.setStyleSheet("""
                 QPushButton {
@@ -225,6 +323,43 @@ class VaultWindow(QWidget):
                 }
             """)
             text_label.setStyleSheet("color: #888888; background: transparent;")
+            icon_label.setStyleSheet("color: #888888; background: transparent; font-size: 12px;")
+
+        return tab
+
+    def create_nav_tab(self, icon, text, is_active=False):
+        """Create a navigation tab with VERY visible styling for debugging"""
+        tab = QPushButton(f"{icon} {text}")  # Put text directly in button for now
+        tab.setFixedHeight(36)
+        tab.setFixedWidth(100)  # Force a width so we can see it
+        tab.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        if is_active:
+            tab.setStyleSheet("""
+                QPushButton {
+                    background: #4CAF50;  /* Bright green - very visible */
+                    border: 2px solid #ffffff;
+                    border-radius: 8px;
+                    color: #ffffff;
+                    font-size: 12px;
+                    font-weight: bold;
+                }
+            """)
+        else:
+            tab.setStyleSheet("""
+                QPushButton {
+                    background: #ff0000;  /* Bright red - very visible */
+                    border: 2px solid #ffffff;
+                    border-radius: 8px;
+                    color: #ffffff;
+                    font-size: 12px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background: #ffff00;  /* Yellow on hover */
+                    color: #000000;
+                }
+            """)
 
         return tab
 
@@ -369,7 +504,7 @@ class VaultWindow(QWidget):
         return section
 
     def create_folder_list_item(self, folder_name, password_count, is_selected=False):
-        """Create a folder list item with proper styling"""
+        """Create folder list item matching target design exactly"""
         item_container = QWidget()
         item_container.setFixedHeight(44)
 
@@ -388,15 +523,19 @@ class VaultWindow(QWidget):
         button_layout.setContentsMargins(12, 0, 12, 0)
         button_layout.setSpacing(12)
 
-        # Folder icon with colored background
+        # Folder icon with colored background - MATCHES TARGET
         icon_container = QWidget()
         icon_container.setFixedSize(28, 28)
 
-        # Icon colors based on folder name
+        # Icon colors based on folder name - EXACTLY like target
         icon_colors = {
-            "Gaming": "#ff6b6b", "Battle.net": "#ff6b6b",
-            "Banking": "#ffa726", "Social Media": "#42a5f5",
-            "Work": "#ab47bc", "Personal": "#66bb6a"
+            "Gaming": "#ff6b6b", "Battle.net": "#ff6b6b", "Battlenet": "#ff6b6b",
+            "Banking": "#ffa726", "Bank": "#ffa726",
+            "Social Media": "#42a5f5", "Social": "#42a5f5",
+            "Work": "#ab47bc", "Personal": "#66bb6a",
+            "Minecraft": "#66bb6a", "Epic Games": "#42a5f5",
+            "Twitch": "#9c27b0", "Gmail": "#f44336",
+            "valorant": "#ff6b6b", "Valorant": "#ff6b6b"
         }
 
         bg_color = icon_colors.get(folder_name, "#666666")
@@ -408,12 +547,23 @@ class VaultWindow(QWidget):
         icon_layout = QHBoxLayout(icon_container)
         icon_layout.setContentsMargins(0, 0, 0, 0)
 
-        icon_label = QLabel("📁")
+        # Use appropriate emoji for folder type
+        folder_icons = {
+            "Gaming": "🎮", "Battle.net": "🎮", "Battlenet": "🎮",
+            "Banking": "🏦", "Bank": "🏦",
+            "Social Media": "📱", "Social": "📱",
+            "Work": "💼", "Personal": "👤",
+            "Minecraft": "🎮", "Epic Games": "🎮",
+            "Twitch": "📺", "Gmail": "📧",
+            "valorant": "🎮", "Valorant": "🎮"
+        }
+
+        icon_label = QLabel(folder_icons.get(folder_name, "📁"))
         icon_label.setStyleSheet("background: transparent; font-size: 14px;")
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icon_layout.addWidget(icon_label)
 
-        # Folder info
+        # Folder info - MATCHES TARGET LAYOUT
         info_layout = QVBoxLayout()
         info_layout.setSpacing(2)
         info_layout.setContentsMargins(0, 0, 0, 0)
@@ -422,6 +572,7 @@ class VaultWindow(QWidget):
         name_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
         name_label.setStyleSheet("color: #ffffff; background: transparent;")
 
+        # CRITICAL: Show password count like target
         count_label = QLabel(f"{password_count} passwords")
         count_label.setFont(QFont("Segoe UI", 9))
         count_label.setStyleSheet("color: #888888; background: transparent;")
@@ -432,7 +583,7 @@ class VaultWindow(QWidget):
         button_layout.addWidget(icon_container)
         button_layout.addLayout(info_layout, 1)
 
-        # Selection indicator
+        # Selection indicator - GREEN BAR when selected
         indicator = QWidget()
         indicator.setFixedSize(3, 24)
 
@@ -469,7 +620,6 @@ class VaultWindow(QWidget):
         item.clicked.connect(lambda: self.select_folder(folder_name))
 
         container_layout.addWidget(item)
-
         return item_container
 
     def create_quick_actions_section(self):
@@ -932,9 +1082,9 @@ class VaultWindow(QWidget):
         return tab
 
     def create_password_card(self, entry_idx, entry, schema):
-        """Create password card that matches mockup exactly"""
+        """Create password card matching target design exactly"""
         card = QWidget()
-        card.setFixedHeight(92)  # Slightly taller to match mockup
+        card.setFixedHeight(92)  # Matches target height
         card.setStyleSheet("""
             QWidget {
                 background: #3a3a3d;
@@ -951,22 +1101,22 @@ class VaultWindow(QWidget):
         layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(16)
 
-        # Expand arrow (collapsible indicator)
+        # Expand arrow (for future collapsible feature)
         expand_arrow = QLabel("▶")
         expand_arrow.setFixedSize(16, 16)
         expand_arrow.setStyleSheet("color: #666666; font-size: 12px; background: transparent;")
 
-        # Entry info
+        # Entry info section
         info_layout = QVBoxLayout()
         info_layout.setSpacing(4)
 
-        # Title
+        # Title - LARGER and more prominent like target
         title = self.get_entry_display_name(entry, schema)
         title_label = QLabel(title)
-        title_label.setFont(QFont("Segoe UI", 15, QFont.Weight.Medium))
+        title_label.setFont(QFont("Segoe UI", 15, QFont.Weight.Medium))  # Bigger font
         title_label.setStyleSheet("color: #ffffff; background: transparent;")
 
-        # Username/email
+        # Username/email - smaller, gray text
         username = self.get_entry_username(entry, schema)
         username_label = QLabel(username if username else "No username")
         username_label.setFont(QFont("Segoe UI", 12))
@@ -978,11 +1128,11 @@ class VaultWindow(QWidget):
         layout.addWidget(expand_arrow)
         layout.addLayout(info_layout, 1)
 
-        # Action buttons (smaller, more compact)
+        # Action buttons - COMPACT like target
         actions_layout = QHBoxLayout()
         actions_layout.setSpacing(8)
 
-        # Copy button
+        # Copy button - matches target size and style
         copy_btn = QPushButton("Copy")
         copy_btn.setFixedSize(50, 28)
         copy_btn.setStyleSheet("""
@@ -1002,7 +1152,7 @@ class VaultWindow(QWidget):
         password = self.get_entry_password(entry, schema)
         copy_btn.clicked.connect(lambda: self.copy_to_clipboard(password))
 
-        # Edit button (icon only)
+        # Edit button - icon only, compact
         edit_btn = QPushButton("✏️")
         edit_btn.setFixedSize(28, 28)
         edit_btn.setStyleSheet("""
@@ -1019,7 +1169,7 @@ class VaultWindow(QWidget):
         """)
         edit_btn.clicked.connect(lambda: self.edit_entry(entry_idx, entry))
 
-        # Delete button (icon only, red)
+        # Delete button - red accent like target
         delete_btn = QPushButton("🗑️")
         delete_btn.setFixedSize(28, 28)
         delete_btn.setStyleSheet("""
@@ -1061,7 +1211,7 @@ class VaultWindow(QWidget):
         return ""
 
     def refresh_entries_cards(self):
-        """Refresh entries using card layout with proper header"""
+        """Refresh entries with proper header updates to match target"""
         # Clear existing cards
         while self.cards_layout.count():
             child = self.cards_layout.takeAt(0)
@@ -1071,6 +1221,7 @@ class VaultWindow(QWidget):
         if not self.selected_folder:
             # Update header for no selection
             self.folder_title.setText("Select a Folder")
+            self.folder_subtitle.setText("Choose a folder to view passwords")
 
             # Show "no folder selected" message
             no_folder_card = self.create_no_folder_message()
@@ -1081,27 +1232,29 @@ class VaultWindow(QWidget):
         folder_data = self.vault_data.get("data", {}).get(self.selected_folder)
         if not folder_data:
             self.folder_title.setText("Error")
+            self.folder_subtitle.setText("Folder not found")
             error_card = self.create_error_message(f"Folder '{self.selected_folder}' not found")
             self.cards_layout.addWidget(error_card)
             return
 
-        # Update header with folder info
+        # Update header with folder info - MATCHES TARGET FORMAT
         entries = folder_data.get("entries", [])
         entry_count = len(entries)
 
-        # Update header to match mockup style
+        # Update header to match target exactly
         self.folder_title.setText(self.selected_folder)
+        # Target shows: "8 passwords • Last updated 2 days ago"
         self.folder_subtitle.setText(f"{entry_count} passwords • Last updated 2 days ago")
 
         # Get schema
         schema = folder_data.get("schema", ["Title", "Username", "Password"])
 
         if not entries:
-            # Show add new entry button
+            # Show add new entry message when empty
             no_entries_card = self.create_no_entries_message()
             self.cards_layout.addWidget(no_entries_card)
         else:
-            # Add password cards
+            # Add password cards in target layout
             for entry_idx, entry in enumerate(entries):
                 card = self.create_password_card(entry_idx, entry, schema)
                 self.cards_layout.addWidget(card)
@@ -1110,7 +1263,7 @@ class VaultWindow(QWidget):
         self.cards_layout.addStretch()
 
     def create_entries_header(self):
-        """Create header that matches mockup style"""
+        """Create header matching target design exactly"""
         header = QWidget()
         header.setFixedHeight(80)
 
@@ -1118,26 +1271,28 @@ class VaultWindow(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(16)
 
-        # Left side - Folder icon and title
+        # Left side - Folder icon and title info
         title_layout = QHBoxLayout()
         title_layout.setSpacing(12)
 
-        # Document icon (matches mockup)
-        folder_icon = QLabel("📄")
+        # FOLDER ICON - matches target exactly
+        folder_icon = QLabel("📁")  # This matches the target design
         folder_icon.setStyleSheet("font-size: 24px; background: transparent;")
 
-        # Title and subtitle
+        # Title and subtitle section
         title_info = QVBoxLayout()
         title_info.setSpacing(4)
 
-        # Main title with "ENTRIES IN:" prefix
+        # Main title with proper prefix - EXACTLY like target
         title_container = QHBoxLayout()
         title_container.setSpacing(8)
 
+        # "ENTRIES IN:" prefix - small, gray, uppercase
         entries_prefix = QLabel("ENTRIES IN:")
         entries_prefix.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
         entries_prefix.setStyleSheet("color: #666666; background: transparent; letter-spacing: 0.5px;")
 
+        # Folder name - large, white, bold
         self.folder_title = QLabel("Select a Folder")
         self.folder_title.setFont(QFont("Segoe UI", 24, QFont.Weight.Bold))
         self.folder_title.setStyleSheet("color: #ffffff; background: transparent;")
@@ -1146,7 +1301,7 @@ class VaultWindow(QWidget):
         title_container.addWidget(self.folder_title)
         title_container.addStretch()
 
-        # Subtitle
+        # Subtitle - password count and last updated
         self.folder_subtitle = QLabel("Choose a folder to view passwords")
         self.folder_subtitle.setFont(QFont("Segoe UI", 12))
         self.folder_subtitle.setStyleSheet("color: #888888; background: transparent;")
@@ -1160,7 +1315,7 @@ class VaultWindow(QWidget):
         layout.addLayout(title_layout)
         layout.addStretch()
 
-        # Right side - Action buttons
+        # Right side - Action buttons matching target
         buttons_layout = QHBoxLayout()
         buttons_layout.setSpacing(12)
 
@@ -1202,7 +1357,7 @@ class VaultWindow(QWidget):
         """)
         delete_folder_btn.clicked.connect(self.delete_folder)
 
-        # Add Password button
+        # Add Password button - GREEN primary button
         add_password_btn = QPushButton("Add Password")
         add_password_btn.setFixedHeight(40)
         add_password_btn.setStyleSheet("""
