@@ -59,80 +59,130 @@ class VaultWindow(QWidget):
         self.setLayout(main_layout)
 
     def create_simple_nav_bar(self):
-        """Create navigation bar matching target design"""
+        """Create navigation bar with just tabs"""
         nav_bar = QWidget()
         nav_bar.setFixedHeight(60)
-        nav_bar.setObjectName("navBar")
+        nav_bar.setStyleSheet("""
+            QWidget {
+                background: #1a1a1d;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            }
+        """)
 
         layout = QHBoxLayout(nav_bar)
-        layout.setContentsMargins(20, 0, 20, 0)
+        layout.setContentsMargins(24, 0, 24, 0)
         layout.setSpacing(0)
 
-        # Left side - Logo and tabs
-        left_layout = QHBoxLayout()
-        left_layout.setSpacing(32)
-
-        # Logo section
-        logo_layout = QHBoxLayout()
-        logo_layout.setSpacing(8)
-
-        logo = QLabel("V")
-        logo.setFixedSize(24, 24)
-        logo.setObjectName("navLogo")  # ADD THIS
-        logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        app_name = QLabel("TheVault")
-        app_name.setObjectName("navAppName")  # ADD THIS
-
-        logo_layout.addWidget(logo)
-        logo_layout.addWidget(app_name)
-
-        # Navigation tabs
+        # Navigation tabs - starts from left edge
         nav_tabs = QHBoxLayout()
-        nav_tabs.setSpacing(24)
+        nav_tabs.setSpacing(32)
 
         tabs = [
-            ("🔒", "Vault", True),
-            ("🛡️", "Security", False),
-            ("👥", "Friends", False),
-            ("📝", "Notes", False),
-            ("⚙️", "Settings", False)
+            ("Vault", True),
+            ("Security", False),
+            ("Friends", False),
+            ("Notes", False),
+            ("Settings", False)
         ]
 
-        for icon, text, is_active in tabs:
-            tab = self.create_nav_tab(icon, text, is_active)
+        for text, is_active in tabs:
+            tab = self.create_nav_tab(text, is_active)
             nav_tabs.addWidget(tab)
 
-        left_layout.addLayout(logo_layout)
-        left_layout.addLayout(nav_tabs)
+        layout.addLayout(nav_tabs)
+        layout.addStretch()
 
-        # Right side - Search, notifications, profile
+        # Right side
         right_layout = QHBoxLayout()
-        right_layout.setSpacing(16)
+        right_layout.setSpacing(12)
 
-        # Search bar - ADD OBJECT NAME
+        # Search bar
         search_bar = QLineEdit()
         search_bar.setPlaceholderText("Search everything...")
-        search_bar.setFixedSize(280, 36)
-        search_bar.setObjectName("navSearch")  # ADD THIS
+        search_bar.setFixedSize(280, 36)  # Can be wider now
+        search_bar.setStyleSheet("""
+            QLineEdit {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                color: #ffffff;
+                font-size: 12px;
+                padding: 0px 12px;
+            }
+            QLineEdit:focus {
+                border: 1px solid rgba(76, 175, 80, 0.5);
+                background: rgba(255, 255, 255, 0.08);
+            }
+            QLineEdit::placeholder {
+                color: #666666;
+            }
+        """)
 
-        # Notification bell - ADD OBJECT NAME
+        # Notification bell
         notification_btn = QPushButton("🔔")
         notification_btn.setFixedSize(36, 36)
-        notification_btn.setObjectName("navNotification")  # ADD THIS
+        notification_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                color: #ffffff;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+        """)
 
-        # User profile - ADD OBJECT NAME
+        # User profile section
+        user_profile_container = QWidget()
+        user_profile_container.setFixedHeight(36)
+        user_profile_layout = QHBoxLayout(user_profile_container)
+        user_profile_layout.setContentsMargins(0, 0, 0, 0)
+        user_profile_layout.setSpacing(8)
+
+        # Square profile picture
         user_btn = QPushButton("JD")
         user_btn.setFixedSize(36, 36)
-        user_btn.setObjectName("navUser")  # ADD THIS
+        user_btn.setStyleSheet("""
+            QPushButton {
+                background: #4CAF50;
+                border: none;
+                border-radius: 8px;
+                color: white;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: #45a049;
+            }
+        """)
+
+        # User info
+        user_info_widget = QWidget()
+        user_info_widget.setFixedHeight(36)
+        user_info_layout = QVBoxLayout(user_info_widget)
+        user_info_layout.setSpacing(0)
+        user_info_layout.setContentsMargins(0, 2, 0, 2)
+
+        user_name = QLabel("John Doe")
+        user_name.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        user_name.setStyleSheet("color: #ffffff; background: transparent;")
+
+        user_status = QLabel("Premium")
+        user_status.setFont(QFont("Segoe UI", 8))
+        user_status.setStyleSheet("color: #4CAF50; background: transparent;")
+
+        user_info_layout.addWidget(user_name)
+        user_info_layout.addWidget(user_status)
+
+        user_profile_layout.addWidget(user_btn)
+        user_profile_layout.addWidget(user_info_widget)
 
         right_layout.addWidget(search_bar)
         right_layout.addWidget(notification_btn)
-        right_layout.addWidget(user_btn)
+        right_layout.addWidget(user_profile_container)
 
-        # Assemble
-        layout.addLayout(left_layout)
-        layout.addStretch()
         layout.addLayout(right_layout)
 
         return nav_bar
@@ -198,26 +248,41 @@ class VaultWindow(QWidget):
 
         return tab
 
-    def create_nav_tab(self, icon, text, is_active=False):
-        """Create navigation tab with proper styling"""
-        tab = QPushButton()
+    def create_nav_tab(self, text, is_active=False):
+        """Create a navigation tab button"""
+        tab = QPushButton(text)
         tab.setFixedHeight(36)
-        tab.setObjectName("navTab")  # This matches your CSS
-        tab.setProperty("active", is_active)  # For CSS [active="true"]
+        tab.setMinimumWidth(90)
         tab.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        tab_layout = QHBoxLayout(tab)
-        tab_layout.setContentsMargins(12, 0, 12, 0)
-        tab_layout.setSpacing(6)
-
-        icon_label = QLabel(icon)
-        icon_label.setObjectName("navTabIcon")
-
-        text_label = QLabel(text)
-        text_label.setObjectName("navTabText")
-
-        tab_layout.addWidget(icon_label)
-        tab_layout.addWidget(text_label)
+        if is_active:
+            tab.setStyleSheet("""
+                QPushButton {
+                    background: rgba(76, 175, 80, 0.15);
+                    border: none;
+                    border-radius: 8px;
+                    color: #4CAF50;
+                    font-size: 11px;
+                    font-weight: 500;
+                    padding: 0px 16px;
+                }
+            """)
+        else:
+            tab.setStyleSheet("""
+                QPushButton {
+                    background: transparent;
+                    border: none;
+                    border-radius: 8px;
+                    color: #ffffff;
+                    font-size: 11px;
+                    font-weight: 500;
+                    padding: 0px 16px;
+                }
+                QPushButton:hover {
+                    background: rgba(255, 255, 255, 0.05);
+                    color: #ffffff;
+                }
+            """)
 
         return tab
 
