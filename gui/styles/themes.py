@@ -1,360 +1,314 @@
 DARK_THEME = """
 /* ===========================================
-   DESIGN TOKENS - All colors and spacing
-   =========================================== */
-
-/* Core Colors */
-:root {
-    --primary-green: #4CAF50;
-    --primary-green-hover: #45a049;
-    --primary-green-light: rgba(76, 175, 80, 0.15);
-
-    --background-main: #2d2d30;
-    --background-sidebar: #1a1a1d;
-    --background-card: #3a3a3d;
-    --background-card-hover: #404043;
-
-    --text-primary: #ffffff;
-    --text-secondary: #888888;
-    --text-muted: #666666;
-
-    --border-subtle: rgba(255, 255, 255, 0.08);
-    --border-light: rgba(255, 255, 255, 0.15);
-    --border-medium: rgba(255, 255, 255, 0.25);
-
-    --danger-red: #ff4757;
-    --warning-orange: #ffa726;
-    --info-blue: #42a5f5;
-
-    --spacing-xs: 4px;
-    --spacing-sm: 8px;
-    --spacing-md: 12px;
-    --spacing-lg: 16px;
-    --spacing-xl: 20px;
-    --spacing-xxl: 24px;
-}
-
-/* ===========================================
-   MAIN WINDOW & LAYOUT
+   MAIN WINDOW & LAYOUT - FIXED
    =========================================== */
 
 QMainWindow {
-    background: transparent;
+    background: #2d2d30;  /* CHANGED: Was transparent */
 }
 
 QWidget#mainWidget {
-    background: var(--background-main);
+    background: #2d2d30;
     border-radius: 15px;
 }
 
 QWidget {
     background: transparent;
-    color: var(--text-primary);
+    color: #ffffff;
     font-family: "Segoe UI", system-ui, sans-serif;
+}
+QLabel#navLogo {
+    background: #4CAF50;
+    color: white;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+QLabel#navAppName {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: bold;
+    background: transparent;
 }
 
 /* ===========================================
    NAVIGATION BAR (TOP)
    =========================================== */
 
-/* Navigation container */
-QWidget[objectName="navBar"] {
-    background: var(--background-sidebar);
-    border-bottom: 1px solid var(--border-subtle);
+QWidget#navBar {
+    background: #1a1a1d;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Navigation tabs */
-QPushButton[objectName="navTab"] {
+QPushButton#navTab {
     background: transparent;
     border: none;
     border-radius: 8px;
-    color: var(--text-secondary);
+    color: #888888;
     font-size: 11px;
     font-weight: 500;
-    padding: 8px 12px;
-    text-align: left;
 }
 
-QPushButton[objectName="navTab"]:hover {
+QPushButton#navTab[active="true"] {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4CAF50;
+}
+
+QPushButton#navTab:hover {
     background: rgba(255, 255, 255, 0.05);
-    color: var(--text-primary);
+    color: #ffffff;
 }
 
-QPushButton[objectName="navTab"][active="true"] {
-    background: var(--primary-green-light);
-    color: var(--primary-green);
-    font-weight: 600;
+QLabel#navTabIcon {
+    font-size: 14px;
+    background: transparent;
 }
 
-/* Search bar */
-QLineEdit[objectName="searchBar"] {
+QLabel#navTabText {
+    font-size: 11px;
+    font-weight: 500;
+    background: transparent;
+}
+
+QLineEdit#navSearch {
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-light);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
-    color: var(--text-primary);
+    color: #ffffff;
     font-size: 12px;
-    padding: 8px 12px;
+    padding: 0px 12px;
 }
 
-QLineEdit[objectName="searchBar"]:focus {
-    border: 1px solid var(--primary-green);
-    background: rgba(255, 255, 255, 0.08);
+QPushButton#navNotification, QPushButton#navUser {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 14px;
 }
 
-QLineEdit[objectName="searchBar"]::placeholder {
-    color: var(--text-muted);
-}
-
-/* Profile and control buttons */
-QPushButton[objectName="profileBtn"] {
-    background: var(--primary-green);
-    border: none;
-    border-radius: 18px;
-    color: white;
+QPushButton#navUser {
+    background: #4CAF50;
+    font-weight: bold;
     font-size: 12px;
-    font-weight: bold;
-}
-
-QPushButton[objectName="profileBtn"]:hover {
-    background: var(--primary-green-hover);
-}
-
-QPushButton[objectName="windowControl"] {
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    border-radius: 15px;
-    color: var(--text-primary);
-    font-weight: bold;
-}
-
-QPushButton[objectName="windowControl"]:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-QPushButton[objectName="closeControl"]:hover {
-    background: var(--danger-red);
 }
 
 /* ===========================================
    LEFT SIDEBAR
    =========================================== */
 
-QWidget[objectName="leftSidebar"] {
-    background: var(--background-sidebar);
-    border-right: 1px solid var(--border-subtle);
+QWidget#leftPanel {
+    background: #1a1a1d;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Security Health Section */
-QWidget[objectName="securityHealth"] {
-    background: var(--background-main);
-    border: 1px solid var(--border-subtle);
+/* Security Health */
+QWidget#securityHealth {
+    background: #2d2d30;
     border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Folders Section */
-QLabel[objectName="sectionTitle"] {
-    color: var(--text-muted);
-    font-size: 10px;
+QLabel#securityTitle {
+    color: #ffffff;
+    font-size: 12px;
     font-weight: bold;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-}
-
-/* Individual folder items */
-QWidget[objectName="folderItem"] {
     background: transparent;
-    border-radius: 6px;
-    padding: 8px 12px;
 }
 
-QWidget[objectName="folderItem"]:hover {
-    background: rgba(255, 255, 255, 0.05);
-}
-
-QWidget[objectName="folderItem"][selected="true"] {
-    background: var(--primary-green-light);
-}
-
-/* Folder icons */
-QLabel[objectName="folderIcon"] {
-    border-radius: 6px;
-    font-size: 14px;
-    text-align: center;
-}
-
-/* Folder text */
-QLabel[objectName="folderName"] {
-    color: var(--text-primary);
+QLabel#securityStatus[hasIssues="true"] {
+    color: #ff9500;
     font-size: 11px;
-    font-weight: 500;
-}
-
-QLabel[objectName="folderCount"] {
-    color: var(--text-secondary);
-    font-size: 9px;
-}
-
-/* Selection indicator */
-QWidget[objectName="selectionIndicator"] {
+    font-weight: 600;
     background: transparent;
-    border-radius: 1px;
 }
 
-QWidget[objectName="selectionIndicator"][selected="true"] {
-    background: var(--primary-green);
-}
-
-/* Quick Actions */
-QPushButton[objectName="quickAction"] {
+QLabel#securityStatus[hasIssues="false"] {
+    color: #4CAF50;
+    font-size: 11px;
+    font-weight: 600;
     background: transparent;
-    border: 1px solid var(--border-light);
-    border-radius: 6px;
-    color: var(--text-primary);
-    font-size: 10px;
-    padding: 8px 12px;
-    text-align: left;
 }
 
-QPushButton[objectName="quickAction"]:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-medium);
-}
-
-/* Recent Activity */
-QLabel[objectName="activityText"] {
-    color: var(--text-primary);
-    font-size: 10px;
-}
-
-QLabel[objectName="activityTime"] {
-    color: var(--text-secondary);
-    font-size: 8px;
+QLabel#securityDesc {
+    color: #888888;
+    font-size: 11px;
+    background: transparent;
 }
 
 /* ===========================================
-   MAIN CONTENT AREA (RIGHT)
+   FOLDER LIST STYLES
    =========================================== */
 
-QWidget[objectName="mainContent"] {
-    background: var(--background-main);
-}
-
-/* Content header */
-QWidget[objectName="contentHeader"] {
+QPushButton#folderItemBtn {
     background: transparent;
-    border-bottom: 1px solid var(--border-subtle);
-    padding: var(--spacing-xxl);
-}
-
-QLabel[objectName="contentTitle"] {
-    color: var(--text-primary);
-    font-size: 24px;
-    font-weight: bold;
-}
-
-QLabel[objectName="contentSubtitle"] {
-    color: var(--text-secondary);
-    font-size: 12px;
-}
-
-QLabel[objectName="contentPrefix"] {
-    color: var(--text-muted);
-    font-size: 11px;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-}
-
-/* Header action buttons */
-QPushButton[objectName="headerAction"] {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid var(--border-light);
-    border-radius: 8px;
-    color: var(--text-primary);
-    font-size: 12px;
-    font-weight: 500;
-    padding: 8px 16px;
-}
-
-QPushButton[objectName="headerAction"]:hover {
-    background: rgba(255, 255, 255, 0.12);
-}
-
-QPushButton[objectName="headerActionDanger"] {
-    background: rgba(255, 71, 87, 0.1);
-    border: 1px solid rgba(255, 71, 87, 0.3);
-    color: var(--danger-red);
-}
-
-QPushButton[objectName="headerActionDanger"]:hover {
-    background: rgba(255, 71, 87, 0.15);
-}
-
-QPushButton[objectName="headerActionPrimary"] {
-    background: var(--primary-green);
     border: none;
-    color: white;
-    font-weight: 600;
+    border-radius: 6px;
+    text-align: left;
 }
 
-QPushButton[objectName="headerActionPrimary"]:hover {
-    background: var(--primary-green-hover);
+QPushButton#folderItemBtn[selected="true"] {
+    background: rgba(76, 175, 80, 0.15);
+}
+
+QPushButton#folderItemBtn:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+QWidget#folderIcon[color="red"] { 
+    background: #ff6b6b; 
+    border-radius: 6px; 
+}
+QWidget#folderIcon[color="orange"] { 
+    background: #ffa726; 
+    border-radius: 6px; 
+}
+QWidget#folderIcon[color="blue"] { 
+    background: #42a5f5; 
+    border-radius: 6px; 
+}
+QWidget#folderIcon[color="green"] { 
+    background: #66bb6a; 
+    border-radius: 6px; 
+}
+QWidget#folderIcon[color="purple"] { 
+    background: #ab47bc; 
+    border-radius: 6px; 
+}
+QWidget#folderIcon[color="gray"] { 
+    background: #666666; 
+    border-radius: 6px; 
+}
+
+QLabel#folderIconLabel {
+    background: transparent;
+    font-size: 14px;
+}
+
+QLabel#folderName {
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 500;
+    background: transparent;
+}
+
+QLabel#folderCount {
+    color: #888888;
+    font-size: 9px;
+    background: transparent;
+}
+
+QWidget#folderIndicator[selected="true"] {
+    background: #4CAF50;
+    border-radius: 1px;
+}
+
+QWidget#folderIndicator {
+    background: transparent;
 }
 
 /* ===========================================
    PASSWORD CARDS
    =========================================== */
 
-QWidget[objectName="passwordCard"] {
-    background: var(--background-card);
-    border: 1px solid var(--border-subtle);
+QWidget#passwordCard {
+    background: #3a3a3d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
-    margin: 2px;
 }
 
-QWidget[objectName="passwordCard"]:hover {
-    background: var(--background-card-hover);
-    border: 1px solid var(--border-light);
+QWidget#passwordCard:hover {
+    background: #404043;
+    border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-/* Card content */
-QLabel[objectName="cardTitle"] {
-    color: var(--text-primary);
+QLabel#expandArrow {
+    color: #666666;
+    font-size: 12px;
+    background: transparent;
+}
+
+QLabel#cardTitle {
+    color: #ffffff;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
+    background: transparent;
 }
 
-QLabel[objectName="cardSubtitle"] {
-    color: var(--text-secondary);
+QLabel#cardSubtitle {
+    color: #888888;
     font-size: 12px;
+    background: transparent;
 }
 
-QLabel[objectName="cardIcon"] {
-    color: var(--text-muted);
-    font-size: 12px;
-}
-
-/* Card action buttons */
-QPushButton[objectName="cardAction"] {
+QPushButton#cardCopyBtn {
     background: rgba(255, 255, 255, 0.08);
-    border: 1px solid var(--border-light);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 6px;
-    color: var(--text-primary);
+    color: #ffffff;
     font-size: 10px;
     font-weight: 500;
 }
 
-QPushButton[objectName="cardAction"]:hover {
-    background: rgba(255, 255, 255, 0.12);
+QPushButton#cardEditBtn, QPushButton#cardDeleteBtn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    font-size: 12px;
 }
 
-QPushButton[objectName="cardActionDanger"] {
+QPushButton#cardDeleteBtn {
     background: rgba(255, 71, 87, 0.1);
     border: 1px solid rgba(255, 71, 87, 0.3);
-    color: var(--danger-red);
+    color: #ff4757;
 }
 
-QPushButton[objectName="cardActionDanger"]:hover {
-    background: rgba(255, 71, 87, 0.15);
+/* ===========================================
+   TITLE BAR & WINDOW CONTROLS
+   =========================================== */
+
+QWidget#titleBar {
+    background: #2d2d30;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+}
+
+QLabel#titleLabel {
+    color: #ffffff;
+    font-weight: 500;
+    background: transparent;
+}
+
+QLabel#versionLabel {
+    color: #ffffff;
+    background: transparent;
+}
+
+QPushButton#windowControl {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 15px;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+QPushButton#windowControl:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+QPushButton#closeControl {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 15px;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+QPushButton#closeControl:hover {
+    background: #ff4757;
 }
 
 /* ===========================================
@@ -363,21 +317,21 @@ QPushButton[objectName="cardActionDanger"]:hover {
 
 ModernLineEdit {
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid var(--border-light);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
     padding: 8px 12px;
-    color: var(--text-primary);
-    selection-background-color: var(--primary-green);
+    color: #ffffff;
+    selection-background-color: #4CAF50;
 }
 
 ModernLineEdit:focus {
-    border: 2px solid var(--primary-green);
+    border: 2px solid #4CAF50;
     background: rgba(255, 255, 255, 0.15);
     padding: 7px 11px;
 }
 
 ModernLineEdit::placeholder {
-    color: var(--text-secondary);
+    color: #888888;
 }
 
 ModernButton {
@@ -390,23 +344,47 @@ ModernButton {
 }
 
 ModernButton[primary="true"] {
-    background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-hover) 100%);
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #4CAF50, stop:1 #45a049);
     color: white;
 }
 
 ModernButton[primary="true"]:hover {
-    background: linear-gradient(135deg, var(--primary-green-hover) 0%, #3d8b40 100%);
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #45a049, stop:1 #3d8b40);
+}
+
+ModernButton[primary="true"]:pressed {
+    background: #3d8b40;
 }
 
 ModernButton[primary="false"] {
     background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-    border: 2px solid var(--border-medium);
+    color: #ffffff;
+    border: 2px solid rgba(255, 255, 255, 0.25);
 }
 
 ModernButton[primary="false"]:hover {
     background: rgba(255, 255, 255, 0.15);
     border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+ModernButton[primary="false"]:pressed {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* ===========================================
+   GENERAL LABELS & TEXT
+   =========================================== */
+
+QLabel {
+    color: #ffffff;
+    background: transparent;
+}
+
+QLabel#subtitle {
+    color: #b0b0b0;
+    background: transparent;
 }
 
 /* ===========================================
@@ -419,20 +397,20 @@ QScrollArea {
 }
 
 QScrollBar:vertical {
-    background: rgba(255, 255, 255, 0.05);
-    width: 8px;
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    width: 12px;
+    border-radius: 6px;
     margin: 0px;
 }
 
 QScrollBar::handle:vertical {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
     min-height: 20px;
 }
 
 QScrollBar::handle:vertical:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.5);
 }
 
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
@@ -446,37 +424,34 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
    =========================================== */
 
 QDialog[modern="true"] {
-    background: var(--background-main);
-    color: var(--text-primary);
-    border: 2px solid var(--primary-green);
-    border-radius: 12px;
+    background: #2d2d30;
+    color: #ffffff;
+    border: 2px solid #4CAF50;
+    border-radius: 8px;
 }
 
 /* ===========================================
-   STATES & FOCUS
+   FOCUS STATES
    =========================================== */
 
-/* Remove focus outlines */
-QPushButton:focus, ModernButton:focus, QLineEdit:focus, ModernLineEdit:focus {
+QPushButton:focus {
+    outline: none;
+    border: none;
+}
+
+ModernButton:focus {
+    outline: none;
+    border: none;
+}
+
+QLineEdit:focus {
     outline: none;
 }
 
-/* Disabled states */
-*:disabled {
-    opacity: 0.5;
-}
-
-/* ===========================================
-   ANIMATIONS (Future)
-   =========================================== */
-
-/* All hover transitions */
-* {
-    transition: all 0.2s ease;
+ModernLineEdit:focus {
+    outline: none;
 }
 """
 
-
 def apply_theme(app_instance):
-    """Apply the complete theme to the application"""
     app_instance.setStyleSheet(DARK_THEME)
