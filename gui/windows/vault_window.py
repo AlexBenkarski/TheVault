@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea,
                              QFrame, QPushButton, QGroupBox, QGridLayout, QDialog,
-                             QLineEdit, QTextEdit, QMessageBox, QFileDialog)
+                             QLineEdit, QTextEdit, QMessageBox, QFileDialog, QSizePolicy)
 from PyQt6.QtCore import Qt, pyqtSignal, QDateTime
 from PyQt6.QtGui import QFont
 
@@ -39,7 +39,7 @@ class VaultWindow(QWidget):
 
         # Left panel - fixed width
         left_panel = self.create_left_panel()
-        left_panel.setFixedWidth(375)
+        left_panel.setFixedWidth(280)
 
         # Right panel - takes remaining space
         right_panel = self.create_right_panel()
@@ -287,7 +287,7 @@ class VaultWindow(QWidget):
         return tab
 
     def create_left_panel(self):
-        """Create clean left sidebar panel matching target design"""
+        """Create the enhanced left sidebar panel without Quick Actions"""
         left_widget = QWidget()
         left_widget.setFixedWidth(280)
         left_widget.setStyleSheet("""
@@ -299,68 +299,53 @@ class VaultWindow(QWidget):
 
         left_layout = QVBoxLayout(left_widget)
         left_layout.setContentsMargins(16, 20, 16, 20)
-        left_layout.setSpacing(24)  # More space between sections
+        left_layout.setSpacing(20)
 
         # Security Health Section
         security_section = self.create_security_health_section()
         left_layout.addWidget(security_section)
 
-        # Folders Section
+        # Expanded Folders Section - now takes up more space
         folders_section = self.create_enhanced_folders_section()
         left_layout.addWidget(folders_section)
 
-        # Quick Actions Section
-        quick_actions = self.create_quick_actions_section()
-        left_layout.addWidget(quick_actions)
-
-        # Recent Activity Section
+        # Recent Activity Section - moved up to fill space
         recent_activity = self.create_recent_activity_section()
         left_layout.addWidget(recent_activity)
 
-        left_layout.addStretch()
+        # Remove the addStretch() to let folders take more space naturally
         return left_widget
 
     def create_security_health_section(self):
-        """Create the security health status panel matching target"""
-        print("DEBUG: Creating NEW security health section!")  # Add this line
-
+        """Create the security health status panel - updated to match target"""
         section = QWidget()
-        section.setFixedHeight(120)
+        section.setFixedHeight(110)  # Increased from 80 to fit all content
         section.setStyleSheet("""
             QWidget {
-                background: #2d2d30;
+                background: rgba(76, 175, 80, 0.1);
                 border-radius: 8px;
-                border: 1px solid rgba(255, 255, 255, 0.08);
+                border: none;
             }
         """)
 
         layout = QVBoxLayout(section)
         layout.setContentsMargins(16, 12, 16, 12)
-        layout.setSpacing(8)
+        layout.setSpacing(6)  # Increased spacing between lines
 
-        # Header row
+        # Header row - removed caution emoji
         header_layout = QHBoxLayout()
         header_layout.setSpacing(0)
 
-        title = QLabel("Security Health")
+        title = QLabel("Quick Health")
         title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        title.setStyleSheet("color: #ffffff; background: transparent;")
+        title.setStyleSheet("color: #ffffff; background: transparent; border: none;")
 
-        # Force "Needs Attention" status
-        status_text = "Needs Attention"
-        status_color = "#ff9500"
-        status_indicator = "⚠️"
+        # Status without emoji
+        vault_data = getattr(self, 'vault_data', {}).get('data', {})
+        has_issues = self.check_security_issues(vault_data)
 
-        print(f"DEBUG: Status set to {status_text}")  # Add this line
-
-        # Status container with indicator
-        status_container = QWidget()
-        status_layout = QHBoxLayout(status_container)
-        status_layout.setContentsMargins(0, 0, 0, 0)
-        status_layout.setSpacing(4)
-
-        status_icon = QLabel(status_indicator)
-        status_icon.setStyleSheet("font-size: 12px; background: transparent;")
+        status_text = "Needs Attention" if has_issues else "Good"
+        status_color = "#ff9500" if has_issues else "#4CAF50"
 
         status_label = QLabel(status_text)
         status_label.setStyleSheet(f"""
@@ -368,34 +353,60 @@ class VaultWindow(QWidget):
             font-size: 11px;
             font-weight: 600;
             background: transparent;
+            border: none;
         """)
-
-        status_layout.addWidget(status_icon)
-        status_layout.addWidget(status_label)
-        status_layout.addStretch()
 
         header_layout.addWidget(title)
         header_layout.addStretch()
-        header_layout.addWidget(status_container)
+        header_layout.addWidget(status_label)
         layout.addLayout(header_layout)
 
-        # Always show issues for demo
-        desc_text = "Weak Passwords: 3 found"
-        desc_label = QLabel(desc_text)
-        desc_label.setStyleSheet("color: #ff9500; font-size: 11px; font-weight: 500; background: transparent;")
-        layout.addWidget(desc_label)
+        # Add back all the original content
+        # Weak Passwords line
+        weak_layout = QHBoxLayout()
+        weak_label = QLabel("Weak Passwords:")
+        weak_label.setFont(QFont("Segoe UI", 10))
+        weak_label.setStyleSheet("color: #ff9500; background: transparent; border: none;")
 
-        detail_text = "Last Sync: 2 min ago"
-        detail_label = QLabel(detail_text)
-        detail_label.setStyleSheet("color: #888888; font-size: 10px; background: transparent;")
-        layout.addWidget(detail_label)
+        weak_count = QLabel("3 found")
+        weak_count.setFont(QFont("Segoe UI", 10))
+        weak_count.setStyleSheet("color: #ff9500; background: transparent; border: none;")
 
-        backup_text = "Backup Status: OneDrive ✓"
-        backup_label = QLabel(backup_text)
-        backup_label.setStyleSheet("color: #4CAF50; font-size: 10px; background: transparent;")
-        layout.addWidget(backup_label)
+        weak_layout.addWidget(weak_label)
+        weak_layout.addStretch()
+        weak_layout.addWidget(weak_count)
+        layout.addLayout(weak_layout)
 
-        print("DEBUG: Security section created successfully")  # Add this line
+        # Last Sync line
+        sync_layout = QHBoxLayout()
+        sync_label = QLabel("Last Sync:")
+        sync_label.setFont(QFont("Segoe UI", 10))
+        sync_label.setStyleSheet("color: #888888; background: transparent; border: none;")
+
+        sync_time = QLabel("2 min ago")
+        sync_time.setFont(QFont("Segoe UI", 10))
+        sync_time.setStyleSheet("color: #888888; background: transparent; border: none;")
+
+        sync_layout.addWidget(sync_label)
+        sync_layout.addStretch()
+        sync_layout.addWidget(sync_time)
+        layout.addLayout(sync_layout)
+
+        # Backup Status line
+        backup_layout = QHBoxLayout()
+        backup_label = QLabel("Backup Status:")
+        backup_label.setFont(QFont("Segoe UI", 10))
+        backup_label.setStyleSheet("color: #4CAF50; background: transparent; border: none;")
+
+        backup_status = QLabel("OneDrive ✓")
+        backup_status.setFont(QFont("Segoe UI", 10))
+        backup_status.setStyleSheet("color: #4CAF50; background: transparent; border: none;")
+
+        backup_layout.addWidget(backup_label)
+        backup_layout.addStretch()
+        backup_layout.addWidget(backup_status)
+        layout.addLayout(backup_layout)
+
         return section
 
     def check_security_issues(self, vault_data):
@@ -417,29 +428,49 @@ class VaultWindow(QWidget):
         return issues
 
     def create_folder_list_item(self, folder_name, password_count, is_selected=False):
-        """Clean folder item without color issues"""
+        """Create a folder list item with clean styling - no green bar"""
         item_container = QWidget()
-        item_container.setFixedHeight(48)
-        item_container.setStyleSheet("background: transparent;")
+        item_container.setFixedHeight(44)
 
-        layout = QHBoxLayout(item_container)
-        layout.setContentsMargins(0, 0, 0, 0)
+        # Main layout for the container
+        container_layout = QHBoxLayout(item_container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
 
-        # Clean button styling
+        # The clickable button
         item = QPushButton()
-        item.setFixedHeight(48)
+        item.setFixedHeight(44)
         item.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        # Button layout
+        # Button content layout
         button_layout = QHBoxLayout(item)
-        button_layout.setContentsMargins(12, 8, 12, 8)
-        button_layout.setSpacing(10)
+        button_layout.setContentsMargins(12, 0, 12, 0)
+        button_layout.setSpacing(12)
 
-        # Simple folder icon
+        # Folder icon with colored background
+        icon_container = QWidget()
+        icon_container.setFixedSize(28, 28)
+
+        # Icon colors based on folder name
+        icon_colors = {
+            "Gaming": "#ff6b6b", "Battle.net": "#ff6b6b",
+            "Banking": "#ffa726", "Social Media": "#42a5f5",
+            "Work": "#ab47bc", "Personal": "#66bb6a"
+        }
+
+        bg_color = icon_colors.get(folder_name, "#666666")
+        icon_container.setStyleSheet(f"""
+            background: {bg_color};
+            border-radius: 6px;
+        """)
+
+        icon_layout = QHBoxLayout(icon_container)
+        icon_layout.setContentsMargins(0, 0, 0, 0)
+
         icon_label = QLabel("📁")
-        icon_label.setFixedSize(16, 16)
-        icon_label.setStyleSheet("font-size: 14px; color: #ffa726; background: transparent;")
+        icon_label.setStyleSheet("background: transparent; font-size: 14px;")
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_layout.addWidget(icon_label)
 
         # Folder info
         info_layout = QVBoxLayout()
@@ -447,7 +478,7 @@ class VaultWindow(QWidget):
         info_layout.setContentsMargins(0, 0, 0, 0)
 
         name_label = QLabel(folder_name)
-        name_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Medium))
+        name_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
         name_label.setStyleSheet("color: #ffffff; background: transparent;")
 
         count_label = QLabel(f"{password_count} passwords")
@@ -457,19 +488,26 @@ class VaultWindow(QWidget):
         info_layout.addWidget(name_label)
         info_layout.addWidget(count_label)
 
-        button_layout.addWidget(icon_label)
+        button_layout.addWidget(icon_container)
         button_layout.addLayout(info_layout, 1)
 
-        # Clean selection styling
+        # NO MORE GREEN INDICATOR BAR - removed completely
+
+        # Updated styling without borders
         if is_selected:
             item.setStyleSheet("""
                 QPushButton {
                     background: rgba(76, 175, 80, 0.15);
-                    border: 1px solid #4CAF50;
+                    border: none;
                     border-radius: 6px;
+                    text-align: left;
                 }
                 QPushButton:hover {
                     background: rgba(76, 175, 80, 0.2);
+                }
+                QPushButton:focus {
+                    outline: none;
+                    background: rgba(76, 175, 80, 0.15);
                 }
             """)
         else:
@@ -478,37 +516,45 @@ class VaultWindow(QWidget):
                     background: transparent;
                     border: none;
                     border-radius: 6px;
+                    text-align: left;
                 }
                 QPushButton:hover {
                     background: rgba(255, 255, 255, 0.05);
                 }
+                QPushButton:focus {
+                    outline: none;
+                    background: rgba(255, 255, 255, 0.08);
+                }
             """)
 
+        # Connect click handler
         item.clicked.connect(lambda: self.select_folder(folder_name))
-        layout.addWidget(item)
+
+        container_layout.addWidget(item)
+
         return item_container
 
     def create_enhanced_folders_section(self):
-        """Enhanced folders section with clean styling"""
+        """Create the enhanced folders section with clean styling"""
         section = QWidget()
-        section.setStyleSheet("background: transparent;")  # REMOVE gray background
-
         layout = QVBoxLayout(section)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
 
-        # Header with add button
+        # Header with add button - FOLDERS text now white
         header_layout = QHBoxLayout()
+        header_layout.setSpacing(0)
+
         folders_title = QLabel("FOLDERS")
-        folders_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        folders_title.setStyleSheet("color: #ffffff; background: transparent;")
+        folders_title.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        folders_title.setStyleSheet("color: #ffffff; background: transparent; letter-spacing: 0.5px;")
 
         add_folder_btn = QPushButton("+")
         add_folder_btn.setFixedSize(20, 20)
         add_folder_btn.setStyleSheet("""
             QPushButton {
                 background: rgba(255, 255, 255, 0.1);
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                border: none;
                 border-radius: 10px;
                 color: #ffffff;
                 font-size: 12px;
@@ -516,6 +562,9 @@ class VaultWindow(QWidget):
             }
             QPushButton:hover {
                 background: rgba(255, 255, 255, 0.2);
+            }
+            QPushButton:focus {
+                outline: none;
             }
         """)
         add_folder_btn.clicked.connect(self.add_folder)
@@ -525,10 +574,12 @@ class VaultWindow(QWidget):
         header_layout.addWidget(add_folder_btn)
         layout.addLayout(header_layout)
 
-        # Clean scrollable folders
+        # CREATE SCROLL AREA for folders
+        from PyQt6.QtWidgets import QScrollArea, QSizePolicy
+
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setFixedHeight(220)
+        scroll_area.setFixedHeight(280)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setStyleSheet("""
@@ -536,26 +587,45 @@ class VaultWindow(QWidget):
                 border: none;
                 background: transparent;
             }
+            QScrollArea > QWidget > QWidget {
+                background: transparent;
+            }
             QScrollBar:vertical {
                 background: rgba(255, 255, 255, 0.05);
                 width: 8px;
                 border-radius: 4px;
+                margin: 0px;
             }
             QScrollBar::handle:vertical {
                 background: rgba(255, 255, 255, 0.2);
                 border-radius: 4px;
                 min-height: 20px;
             }
+            QScrollBar::handle:vertical:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                border: none;
+                background: none;
+                height: 0px;
+            }
         """)
 
+        # Folders container widget inside scroll area
         folders_container = QWidget()
-        folders_container.setStyleSheet("background: transparent;")  # CLEAN
+        folders_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
         self.folders_list_layout = QVBoxLayout(folders_container)
-        self.folders_list_layout.setContentsMargins(0, 0, 0, 0)
-        self.folders_list_layout.setSpacing(3)
+        self.folders_list_layout.setContentsMargins(0, 0, 8, 10)
+        self.folders_list_layout.setSpacing(2)
+        self.folders_list_layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetMinimumSize)
 
+        # Set the folders container as the scroll area's widget
         scroll_area.setWidget(folders_container)
+
+        # Store reference for updates
         self.folders_container = folders_container
+
+        # Add scroll area to main layout instead of direct container
         layout.addWidget(scroll_area)
         return section
 
@@ -657,19 +727,23 @@ class VaultWindow(QWidget):
         return btn
 
     def create_recent_activity_section(self):
-        """Clean Recent Activity without gray background"""
+        """Create recent activity section with clean styling"""
         section = QWidget()
-        section.setStyleSheet("background: transparent;")
-
         layout = QVBoxLayout(section)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
 
-        # Title
+        # Title - white like FOLDERS
         title = QLabel("Recent Activity")
-        title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        title.setStyleSheet("color: #ffffff; background: transparent;")
+        title.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        title.setStyleSheet("color: #ffffff; background: transparent; letter-spacing: 0.5px;")
         layout.addWidget(title)
+
+        # Activity container - no borders
+        activity_container = QWidget()
+        activity_layout = QVBoxLayout(activity_container)
+        activity_layout.setContentsMargins(0, 0, 0, 0)
+        activity_layout.setSpacing(8)
 
         # Activity items
         activities = [
@@ -679,38 +753,14 @@ class VaultWindow(QWidget):
         ]
 
         for activity, time_ago in activities:
-            item = QWidget()
-            item.setFixedHeight(28)
-            item.setStyleSheet("background: transparent;")
+            item = self.create_activity_item(activity, time_ago)
+            activity_layout.addWidget(item)
 
-            item_layout = QHBoxLayout(item)
-            item_layout.setContentsMargins(0, 0, 0, 0)
-            item_layout.setSpacing(8)
-
-            # Green dot
-            dot = QLabel("●")
-            dot.setFixedSize(6, 6)
-            dot.setStyleSheet("color: #4CAF50; font-size: 6px; background: transparent;")
-
-            # Activity text
-            activity_label = QLabel(activity)
-            activity_label.setFont(QFont("Segoe UI", 9))
-            activity_label.setStyleSheet("color: #ffffff; background: transparent;")
-
-            time_label = QLabel(time_ago)
-            time_label.setFont(QFont("Segoe UI", 8))
-            time_label.setStyleSheet("color: #888888; background: transparent;")
-
-            item_layout.addWidget(dot)
-            item_layout.addWidget(activity_label, 1)
-            item_layout.addWidget(time_label)
-
-            layout.addWidget(item)
-
+        layout.addWidget(activity_container)
         return section
 
     def create_activity_item(self, activity, time_ago):
-        """Create an activity item with dot indicator"""
+        """Create an activity item with dot indicator - no borders"""
         item = QWidget()
         item.setFixedHeight(32)
 
@@ -744,9 +794,8 @@ class VaultWindow(QWidget):
 
         return item
 
-    # Update the refresh method to use the new styling
     def refresh_folders_enhanced(self):
-        """Enhanced folder refresh for clean vertical list"""
+        """Enhanced folder refresh for list-style display with proper scrolling"""
         # Clear existing folder items
         if hasattr(self, 'folders_list_layout'):
             while self.folders_list_layout.count():
@@ -767,7 +816,7 @@ class VaultWindow(QWidget):
                 self.folders_list_layout.addWidget(no_folders_label)
                 return
 
-            # Add folder items in clean vertical list
+            # Add folder items
             for folder_name in vault_folders:
                 folder_data = self.vault_data["data"][folder_name]
                 password_count = len(folder_data.get("entries", []))
@@ -777,10 +826,9 @@ class VaultWindow(QWidget):
                 self.folder_buttons[folder_name] = folder_item
                 self.folders_list_layout.addWidget(folder_item)
 
-            # Add stretch to push folders to top
+            # Add stretch at the end to ensure proper spacing
             self.folders_list_layout.addStretch()
 
-    # Helper methods for security analysis (simplified versions)
     def check_security_issues(self, vault_data):
         """Quick check for security issues"""
         if not vault_data:
@@ -823,7 +871,6 @@ class VaultWindow(QWidget):
 
         return issues
 
-    # Add these methods to handle the quick actions
     def add_entry_to_current_folder(self):
         """Add entry to currently selected folder"""
         if not self.selected_folder:
@@ -1428,14 +1475,13 @@ class VaultWindow(QWidget):
         """Main method to refresh entries - now uses card layout"""
         self.refresh_entries_cards()
 
-
     def create_status_bar(self, parent_layout):
         status_bar = QFrame()
         status_bar.setFixedHeight(30)
         status_bar.setStyleSheet("""
             QFrame {
-                background: transparent;
-                border: none;
+                background: #2d2d30; 
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
             }
         """)
 

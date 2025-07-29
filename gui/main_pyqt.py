@@ -425,7 +425,7 @@ class TheVaultApp(QMainWindow):
         main_widget.setLayout(main_layout)
 
         # Add title bar and content area
-        # self._create_title_bar(main_layout)
+        self._create_title_bar(main_layout)
 
         self.stacked_widget = QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
@@ -434,6 +434,13 @@ class TheVaultApp(QMainWindow):
         title_bar = QWidget()
         title_bar.setFixedHeight(40)
         title_bar.setObjectName("titleBar")
+
+        title_bar.setStyleSheet("""
+                QWidget#titleBar {
+                    background: #2d2d30;  /* Match vault background */
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                }
+            """)
 
         title_layout = QHBoxLayout()
         title_layout.setContentsMargins(15, 0, 15, 0)

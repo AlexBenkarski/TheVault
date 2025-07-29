@@ -4,7 +4,7 @@ DARK_THEME = """
    =========================================== */
 
 QMainWindow {
-    background: #2d2d30;  /* CHANGED: Was transparent */
+    background: #2d2d30;
 }
 
 QWidget#mainWidget {
@@ -270,8 +270,7 @@ QPushButton#cardDeleteBtn {
 
 QWidget#titleBar {
     background: #2d2d30;
-    border-top-left-radius: 15px;
-    border-top-right-radius: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 QLabel#titleLabel {
@@ -449,6 +448,36 @@ QLineEdit:focus {
 }
 
 ModernLineEdit:focus {
+    outline: none;
+}
+/* Force remove ALL borders and outlines globally */
+* {
+    border: none !important;
+    outline: none !important;
+}
+
+QWidget {
+    border: none;
+    outline: none;
+}
+
+QPushButton {
+    border: none;
+    outline: none;
+}
+
+QPushButton:focus {
+    border: none;
+    outline: none;
+}
+
+QLabel {
+    border: none;
+    outline: none;
+}
+
+QFrame {
+    border: none;
     outline: none;
 }
 """
