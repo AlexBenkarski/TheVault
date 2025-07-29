@@ -425,7 +425,7 @@ class TheVaultApp(QMainWindow):
         main_widget.setLayout(main_layout)
 
         # Add title bar and content area
-        self._create_title_bar(main_layout)
+        self._create_title_bar(main_layout)  # ADD THIS LINE
 
         self.stacked_widget = QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
@@ -435,18 +435,12 @@ class TheVaultApp(QMainWindow):
         title_bar.setFixedHeight(40)
         title_bar.setObjectName("titleBar")
 
-        title_bar.setStyleSheet("""
-                QWidget#titleBar {
-                    background: #2d2d30;  /* Match vault background */
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-                }
-            """)
-
         title_layout = QHBoxLayout()
-        title_layout.setContentsMargins(15, 0, 15, 0)
+        title_layout.setContentsMargins(20, 0, 20, 0)
         title_bar.setLayout(title_layout)
 
         self._create_vault_controls(title_layout)
+        self._create_nav_tabs(title_layout)
         self._create_user_controls(title_layout)
         self._create_window_controls(title_layout)
 
@@ -455,6 +449,57 @@ class TheVaultApp(QMainWindow):
         # Enable title bar dragging
         title_bar.mousePressEvent = self.mouse_press_event
         title_bar.mouseMoveEvent = self.mouse_move_event
+
+    def _create_nav_tabs(self, title_layout):
+        self.nav_tabs = QWidget()
+        nav_layout = QHBoxLayout(self.nav_tabs)
+        nav_layout.setContentsMargins(0, 0, 0, 0)
+        nav_layout.setSpacing(20)  # Reduced spacing between tabs
+
+        tabs = [
+            ("🔒", "Vault", True),
+            ("🛡️", "Security", False),
+            ("👥", "Friends", False),
+            ("📝", "Notes", False)
+        ]
+
+        for icon, text, is_active in tabs:
+            tab = QPushButton(f"{icon} {text}")
+            tab.setFixedHeight(32)
+
+            if is_active:
+                tab.setStyleSheet("""
+                    QPushButton {
+                        background: rgba(76, 175, 80, 0.15);
+                        border: none;
+                        border-radius: 8px;
+                        color: #4CAF50;
+                        padding: 10px 16px;
+                        font-size: 11px;
+                        font-weight: bold;
+                    }
+                """)
+            else:
+                tab.setStyleSheet("""
+                    QPushButton {
+                        background: transparent;
+                        border: none;
+                        border-radius: 8px;
+                        color: #ffffff;
+                        padding: 10px 16px;
+                        font-size: 11px;
+                        font-weight: bold;
+                    }
+                    QPushButton:hover {
+                        background: rgba(255, 255, 255, 0.05);
+                    }
+                """)
+
+            nav_layout.addWidget(tab)
+
+        self.nav_tabs.hide()
+        title_layout.addWidget(self.nav_tabs)
+
 
     def _create_vault_controls(self, title_layout):
         self.vault_controls = QWidget()
@@ -468,7 +513,7 @@ class TheVaultApp(QMainWindow):
         self.vault_logo.setFixedSize(28, 28)
         self.vault_logo.setScaledContents(True)
 
-        self.vault_title = QLabel("The Vault")
+        self.vault_title = QLabel("Vault")
         self.vault_title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
         self.vault_title.setStyleSheet("color: #ffffff;")
 
@@ -482,22 +527,42 @@ class TheVaultApp(QMainWindow):
         self.user_controls = QWidget()
         user_layout = QHBoxLayout(self.user_controls)
         user_layout.setContentsMargins(0, 0, 0, 0)
-        user_layout.setSpacing(10)
+        user_layout.setSpacing(16)
 
-        # Add bug report button
-        self.bug_report_btn = QPushButton("🐛 Bug")
-        self.bug_report_btn.setFixedHeight(30)
-        self.bug_report_btn.setMinimumWidth(30)
-        self.bug_report_btn.setObjectName("userProfileBtn")
-        self.bug_report_btn.clicked.connect(self.show_bug_report_dialog)
+        # Notification bell (matching target)
+        notification_btn = QPushButton("🔔")
+        notification_btn.setFixedSize(36, 36)
+        notification_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                color: #ffffff;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+        """)
 
-        # Add user profile button
-        self.user_profile_btn = QPushButton("👤 User")
-        self.user_profile_btn.setFixedHeight(30)
-        self.user_profile_btn.setMinimumWidth(30)
-        self.user_profile_btn.setObjectName("userProfileBtn")
+        # User profile circle (matching target)
+        self.user_profile_btn = QPushButton("JD")  # Will be updated with initials
+        self.user_profile_btn.setFixedSize(36, 36)
+        self.user_profile_btn.setStyleSheet("""
+            QPushButton {
+                background: #4CAF50;
+                border: none;
+                border-radius: 18px;
+                color: white;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: #45a049;
+            }
+        """)
 
-        user_layout.addWidget(self.bug_report_btn)
+        user_layout.addWidget(notification_btn)
         user_layout.addWidget(self.user_profile_btn)
         self.user_controls.hide()
 
@@ -741,11 +806,42 @@ class TheVaultApp(QMainWindow):
     def _switch_to_auth_view(self, window):
         # Switch to login-sized window and hide vault controls
         self.resize_window(*self.login_size)
+
+        # Hide vault elements for auth views
+        if hasattr(self, 'vault_controls'):
+            self.vault_controls.hide()
+        if hasattr(self, 'user_controls'):
+            self.user_controls.hide()
+        if hasattr(self, 'nav_tabs'):
+            self.nav_tabs.hide()
+
         self.stacked_widget.setCurrentWidget(window)
 
     def show_vault(self, username, vault_data, vault_key):
-        # Resize to vault size
+        # Resize to vault size and show controls
         self.resize_window(*self.vault_size)
+
+        # Show vault elements
+        if hasattr(self, 'vault_controls'):
+            self.vault_controls.show()
+        if hasattr(self, 'user_controls'):
+            self.user_controls.show()
+        if hasattr(self, 'nav_tabs'):
+            self.nav_tabs.show()
+
+        # Update user profile with initials instead of full username
+        if hasattr(self, 'user_profile_btn'):
+            initials = ''.join([name[0].upper() for name in username.split()[:2]])
+            if not initials:
+                initials = username[:2].upper()
+            self.user_profile_btn.setText(initials)
+
+            # Connect to settings
+            try:
+                self.user_profile_btn.clicked.disconnect()
+            except:
+                pass
+            self.user_profile_btn.clicked.connect(self.vault_window.show_settings_dialog)
 
         # Load vault data and switch to vault view
         self.vault_window.load_vault_data(vault_data, username, vault_key)
