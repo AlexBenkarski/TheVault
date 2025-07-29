@@ -1230,8 +1230,11 @@ class VaultWindow(QWidget):
         status_bar.setFixedHeight(30)
         status_bar.setStyleSheet("""
             QFrame {
-                background: #2d2d30; 
+                background: #1a1a1d; 
                 border-top: 1px solid rgba(255, 255, 255, 0.08);
+                border-bottom-left-radius: 15px;
+                border-bottom-right-radius: 15px;
+
             }
         """)
 

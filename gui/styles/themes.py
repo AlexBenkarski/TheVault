@@ -4,7 +4,7 @@ DARK_THEME = """
    =========================================== */
 
 QMainWindow {
-    background: #2d2d30;
+    background: transparent;
 }
 
 QWidget#mainWidget {
@@ -269,7 +269,9 @@ QPushButton#cardDeleteBtn {
    =========================================== */
 
 QWidget#titleBar {
-    background: #2d2d30;
+    background: #1a1a1d;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -294,6 +296,21 @@ QPushButton#windowControl {
 }
 
 QPushButton#windowControl:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+QPushButton#userProfileBtn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 15px;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+    padding-left: 10px;
+    padding-right: 15px;
+}
+
+QPushButton#userProfileBtn:hover {
     background: rgba(255, 255, 255, 0.2);
 }
 
@@ -372,6 +389,77 @@ ModernButton[primary="false"]:pressed {
     background: rgba(255, 255, 255, 0.2);
 }
 
+/* Entry Widget Styles */
+QFrame[entryWidget="true"] {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    margin: 2px;
+}
+
+QFrame[entryWidget="true"][expanded="true"] {
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid #4CAF50;
+    border-radius: 8px;
+    margin: 2px;
+}
+
+QPushButton[entryHeader="true"] {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: left;
+    padding-left: 15px;
+    outline: none;
+    border-radius: 8px;
+}
+
+QPushButton[entryHeader="true"]:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+QPushButton[entryHeader="true"]:focus {
+    outline: none;
+    border: none;
+}
+
+/* Small Action Buttons */
+QPushButton[smallButton="true"] {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: bold;
+    outline: none;
+}
+
+QPushButton[smallButton="true"]:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+QPushButton[smallButton="true"]:focus {
+    outline: none;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+QPushButton[smallButton="true"][delete="true"] {
+    background: rgba(255, 87, 87, 0.2);
+    border: 1px solid rgba(255, 87, 87, 0.4);
+    color: #ff5757;
+}
+
+QPushButton[smallButton="true"][delete="true"]:hover {
+    background: rgba(255, 87, 87, 0.3);
+}
+
+QPushButton[smallButton="true"][delete="true"]:focus {
+    outline: none;
+    border: 1px solid rgba(255, 87, 87, 0.6);
+}
+
 /* ===========================================
    GENERAL LABELS & TEXT
    =========================================== */
@@ -384,6 +472,30 @@ QLabel {
 QLabel#subtitle {
     color: #b0b0b0;
     background: transparent;
+}
+
+QCheckBox {
+    color: #ffffff;
+    spacing: 8px;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+QCheckBox::indicator:hover {
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+QCheckBox::indicator:checked {
+    border: 2px solid #4CAF50;
+    background: #4CAF50;
+    image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOSIgdmlld0JveD0iMCAwIDEyIDkiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xIDQuNUw0LjUgOEwxMSAxIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4K);
 }
 
 /* ===========================================
@@ -429,6 +541,32 @@ QDialog[modern="true"] {
     border-radius: 8px;
 }
 
+QLineEdit[modern="true"] {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #ffffff;
+}
+
+QLineEdit[modern="true"]:focus {
+    border: 2px solid #4CAF50;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+QTextEdit[modern="true"] {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #ffffff;
+}
+
+QTextEdit[modern="true"]:focus {
+    border: 2px solid #4CAF50;
+    background: rgba(255, 255, 255, 0.15);
+}
+
 /* ===========================================
    FOCUS STATES
    =========================================== */
@@ -450,35 +588,15 @@ QLineEdit:focus {
 ModernLineEdit:focus {
     outline: none;
 }
-/* Force remove ALL borders and outlines globally */
-* {
-    border: none !important;
-    outline: none !important;
-}
 
-QWidget {
-    border: none;
+QCheckBox:focus {
     outline: none;
 }
 
-QPushButton {
-    border: none;
+/* For dialog buttons specifically */
+QPushButton[smallButton="true"]:focus {
     outline: none;
-}
-
-QPushButton:focus {
-    border: none;
-    outline: none;
-}
-
-QLabel {
-    border: none;
-    outline: none;
-}
-
-QFrame {
-    border: none;
-    outline: none;
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 """
 

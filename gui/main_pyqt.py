@@ -2,7 +2,7 @@ import atexit
 import sys
 import os
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QStackedWidget, \
-    QLabel
+    QLabel, QLineEdit
 from PyQt6.QtCore import Qt, QTimer, pyqtSlot, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
 from dev_tools.dev_manager import persistent_dev_cli
@@ -453,8 +453,8 @@ class TheVaultApp(QMainWindow):
     def _create_nav_tabs(self, title_layout):
         self.nav_tabs = QWidget()
         nav_layout = QHBoxLayout(self.nav_tabs)
-        nav_layout.setContentsMargins(0, 0, 0, 0)
-        nav_layout.setSpacing(20)  # Reduced spacing between tabs
+        nav_layout.setContentsMargins(40, 0, 40, 0)
+        nav_layout.setSpacing(25)
 
         tabs = [
             ("🔒", "Vault", True),
@@ -529,30 +529,49 @@ class TheVaultApp(QMainWindow):
         user_layout.setContentsMargins(0, 0, 0, 0)
         user_layout.setSpacing(16)
 
-        # Notification bell (matching target)
-        notification_btn = QPushButton("🔔")
-        notification_btn.setFixedSize(36, 36)
-        notification_btn.setStyleSheet("""
-            QPushButton {
+        # Search bar
+        search_bar = QLineEdit()
+        search_bar.setPlaceholderText("Search everything...")
+        search_bar.setFixedSize(280, 32)
+        search_bar.setStyleSheet("""
+            QLineEdit {
                 background: rgba(255, 255, 255, 0.05);
                 border: 1px solid rgba(255, 255, 255, 0.1);
                 border-radius: 8px;
                 color: #ffffff;
-                font-size: 14px;
+                font-size: 11px;
+                padding: 0px 12px;
             }
-            QPushButton:hover {
-                background: rgba(255, 255, 255, 0.1);
+            QLineEdit:focus {
+                border: 1px solid rgba(76, 175, 80, 0.5);
+                background: rgba(255, 255, 255, 0.08);
+            }
+            QLineEdit::placeholder {
+                color: #666666;
             }
         """)
 
-        # User profile circle (matching target)
-        self.user_profile_btn = QPushButton("JD")  # Will be updated with initials
-        self.user_profile_btn.setFixedSize(36, 36)
+        # Bug report button
+        self.bug_report_btn = QPushButton("Bugs")
+        self.bug_report_btn.setFixedSize(60, 32)
+        self.bug_report_btn.setObjectName("userProfileBtn")
+        self.bug_report_btn.clicked.connect(self.show_bug_report_dialog)
+        self.bug_report_btn.setToolTip("Report Bug")
+
+        # Notification bell
+        notification_btn = QPushButton("🔔")
+        notification_btn.setFixedSize(40, 32)
+        notification_btn.setObjectName("userProfileBtn")
+        notification_btn.setToolTip("Notifications")
+
+        # User profile button (square with rounded corners)
+        self.user_profile_btn = QPushButton("A")
+        self.user_profile_btn.setFixedSize(32, 32)
         self.user_profile_btn.setStyleSheet("""
             QPushButton {
                 background: #4CAF50;
                 border: none;
-                border-radius: 18px;
+                border-radius: 6px;
                 color: white;
                 font-size: 12px;
                 font-weight: bold;
@@ -562,8 +581,11 @@ class TheVaultApp(QMainWindow):
             }
         """)
 
+        user_layout.addWidget(search_bar)
+        user_layout.addWidget(self.bug_report_btn)
         user_layout.addWidget(notification_btn)
         user_layout.addWidget(self.user_profile_btn)
+
         self.user_controls.hide()
 
         title_layout.addStretch()
