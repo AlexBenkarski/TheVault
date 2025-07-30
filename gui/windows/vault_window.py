@@ -1,12 +1,14 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea,
                              QFrame, QPushButton, QGroupBox, QGridLayout, QDialog,
                              QLineEdit, QTextEdit, QMessageBox, QFileDialog, QSizePolicy)
-from PyQt6.QtCore import Qt, pyqtSignal, QDateTime
+from PyQt6.QtCore import Qt, pyqtSignal, QDateTime, QSize
 from PyQt6.QtGui import QFont
 
 from gui.update_manager import get_current_version
 from gui.widgets.modern_widgets import (ModernButton, ModernSmallButton, ModernEntryHeader,
                                         ModernEntryFrame, ModernDialog, ModernFormField, ModernLineEdit)
+from gui.widgets.svg_icons import SvgIcon, Icons
+
 
 
 class VaultWindow(QWidget):
@@ -178,26 +180,23 @@ class VaultWindow(QWidget):
         return section
 
     def create_folder_list_item(self, folder_name, password_count, is_selected=False):
-        """Create a folder list item with clean styling - no green bar"""
+        """Create a folder list item with professional SVG icons"""
         item_container = QWidget()
         item_container.setFixedHeight(44)
 
-        # Main layout for the container
         container_layout = QHBoxLayout(item_container)
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(0)
 
-        # The clickable button
         item = QPushButton()
         item.setFixedHeight(44)
         item.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        # Button content layout
         button_layout = QHBoxLayout(item)
         button_layout.setContentsMargins(12, 0, 12, 0)
         button_layout.setSpacing(12)
 
-        # Folder icon with colored background
+        # Icon container with SVG folder icon
         icon_container = QWidget()
         icon_container.setFixedSize(28, 28)
 
@@ -214,12 +213,15 @@ class VaultWindow(QWidget):
             border-radius: 6px;
         """)
 
+        # Create SVG folder icon
         icon_layout = QHBoxLayout(icon_container)
         icon_layout.setContentsMargins(0, 0, 0, 0)
 
-        icon_label = QLabel("📁")
-        icon_label.setStyleSheet("background: transparent; font-size: 14px;")
+        icon_label = QLabel()
+        folder_svg_icon = SvgIcon.create_icon(Icons.FOLDER, QSize(16, 16), "#ffffff")
+        icon_label.setPixmap(folder_svg_icon.pixmap(16, 16))
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_label.setStyleSheet("background: transparent;")
         icon_layout.addWidget(icon_label)
 
         # Folder info
@@ -241,10 +243,12 @@ class VaultWindow(QWidget):
         button_layout.addWidget(icon_container)
         button_layout.addLayout(info_layout, 1)
 
-        # NO MORE GREEN INDICATOR BAR - removed completely
+        # Selection indicator
+        indicator = QWidget()
+        indicator.setFixedSize(3, 24)
 
-        # Updated styling without borders
         if is_selected:
+            indicator.setStyleSheet("background: #4CAF50; border-radius: 1px;")
             item.setStyleSheet("""
                 QPushButton {
                     background: rgba(76, 175, 80, 0.15);
@@ -255,12 +259,9 @@ class VaultWindow(QWidget):
                 QPushButton:hover {
                     background: rgba(76, 175, 80, 0.2);
                 }
-                QPushButton:focus {
-                    outline: none;
-                    background: rgba(76, 175, 80, 0.15);
-                }
             """)
         else:
+            indicator.setStyleSheet("background: transparent;")
             item.setStyleSheet("""
                 QPushButton {
                     background: transparent;
@@ -271,17 +272,14 @@ class VaultWindow(QWidget):
                 QPushButton:hover {
                     background: rgba(255, 255, 255, 0.05);
                 }
-                QPushButton:focus {
-                    outline: none;
-                    background: rgba(255, 255, 255, 0.08);
-                }
             """)
+
+        button_layout.addWidget(indicator)
 
         # Connect click handler
         item.clicked.connect(lambda: self.select_folder(folder_name))
 
         container_layout.addWidget(item)
-
         return item_container
 
     def create_enhanced_folders_section(self):
@@ -990,7 +988,9 @@ class VaultWindow(QWidget):
 
         # Copy button
         copy_btn = QPushButton("Copy")
-        copy_btn.setFixedSize(45, 26)  # Slightly smaller
+        copy_btn.setFixedSize(50, 28)
+        copy_icon = SvgIcon.create_icon(Icons.COPY, QSize(12, 12), "#ffffff")
+        copy_btn.setIcon(copy_icon)
         copy_btn.setStyleSheet("""
             QPushButton {
                 background: rgba(255, 255, 255, 0.08);
@@ -1009,8 +1009,10 @@ class VaultWindow(QWidget):
         copy_btn.clicked.connect(lambda: self.copy_to_clipboard(password))
 
         # Edit button (icon only)
-        edit_btn = QPushButton("✏️")
-        edit_btn.setFixedSize(26, 26)  # Slightly smaller
+        edit_btn = QPushButton()
+        edit_btn.setFixedSize(28, 28)
+        edit_icon = SvgIcon.create_icon(Icons.EDIT, QSize(12, 12), "#ffffff")
+        edit_btn.setIcon(edit_icon)
         edit_btn.setStyleSheet("""
             QPushButton {
                 background: rgba(255, 255, 255, 0.08);
@@ -1026,8 +1028,10 @@ class VaultWindow(QWidget):
         edit_btn.clicked.connect(lambda: self.edit_entry(entry_idx, entry))
 
         # Delete button (icon only, red)
-        delete_btn = QPushButton("🗑️")
-        delete_btn.setFixedSize(26, 26)  # Slightly smaller
+        delete_btn = QPushButton()
+        delete_btn.setFixedSize(28, 28)
+        delete_icon = SvgIcon.create_icon(Icons.DELETE, QSize(12, 12), "#ff4757")
+        delete_btn.setIcon(delete_icon)
         delete_btn.setStyleSheet("""
             QPushButton {
                 background: rgba(255, 71, 87, 0.1);

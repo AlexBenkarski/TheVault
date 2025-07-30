@@ -3,7 +3,7 @@ import sys
 import os
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QStackedWidget, \
     QLabel, QLineEdit
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot, pyqtSignal, QSize
 from PyQt6.QtGui import QFont, QIcon
 from dev_tools.dev_manager import persistent_dev_cli
 from gui.analytics_manager import AnalyticsManager
@@ -20,6 +20,8 @@ from tray import SystemTrayManager
 from PyQt6.QtWidgets import QSystemTrayIcon
 from game_integration.tray_bridge import GameIntegrationBridge
 from game_integration.background_monitor.epic_detector import EpicDetector
+from gui.widgets.svg_icons import SvgIcon, Icons
+
 
 
 
@@ -451,21 +453,48 @@ class TheVaultApp(QMainWindow):
         title_bar.mouseMoveEvent = self.mouse_move_event
 
     def _create_nav_tabs(self, title_layout):
+        # Add stretch before tabs to center them
+        title_layout.addStretch()
+
         self.nav_tabs = QWidget()
         nav_layout = QHBoxLayout(self.nav_tabs)
-        nav_layout.setContentsMargins(40, 0, 40, 0)
-        nav_layout.setSpacing(25)
+        nav_layout.setContentsMargins(0, 0, 0, 0)
+        nav_layout.setSpacing(20)  # Spacing between tabs
 
         tabs = [
-            ("🔒", "Vault", True),
-            ("🛡️", "Security", False),
-            ("👥", "Friends", False),
-            ("📝", "Notes", False)
+            (Icons.VAULT, "Vault", True),
+            (Icons.SECURITY, "Security", False),
+            (Icons.FRIENDS, "Friends", False),
+            (Icons.NOTES, "Notes", False),
+            (Icons.BUG, "Bugs", False)
         ]
 
-        for icon, text, is_active in tabs:
-            tab = QPushButton(f"{icon} {text}")
-            tab.setFixedHeight(32)
+        for svg_icon, text, is_active in tabs:
+            tab = QPushButton()
+            tab.setFixedHeight(36)
+            tab.setFixedWidth(95)  # Fixed width for even spacing
+            tab.setCursor(Qt.CursorShape.PointingHandCursor)
+
+            tab_layout = QHBoxLayout(tab)
+            tab_layout.setContentsMargins(12, 0, 12, 0)
+            tab_layout.setSpacing(1)  # Very tight spacing between icon and text
+
+            # Create SVG icon
+            icon_label = QLabel()
+            if is_active:
+                icon = SvgIcon.create_icon(svg_icon, QSize(16, 16), "#ffffff")
+            else:
+                icon = SvgIcon.create_icon(svg_icon, QSize(16, 16), "#ffffff")
+            icon_label.setPixmap(icon.pixmap(16, 16))
+            icon_label.setStyleSheet("background: transparent;")
+            icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center the icon
+
+            text_label = QLabel(text)
+            text_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
+            text_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)  # Vertically center text
+
+            tab_layout.addWidget(icon_label)
+            tab_layout.addWidget(text_label)
 
             if is_active:
                 tab.setStyleSheet("""
@@ -473,12 +502,11 @@ class TheVaultApp(QMainWindow):
                         background: rgba(76, 175, 80, 0.15);
                         border: none;
                         border-radius: 8px;
-                        color: #4CAF50;
-                        padding: 10px 16px;
-                        font-size: 11px;
-                        font-weight: bold;
+                        color: #ffffff;
+                        padding: 8px 16px;
                     }
                 """)
+                text_label.setStyleSheet("color: #ffffff; background: transparent;")
             else:
                 tab.setStyleSheet("""
                     QPushButton {
@@ -486,19 +514,25 @@ class TheVaultApp(QMainWindow):
                         border: none;
                         border-radius: 8px;
                         color: #ffffff;
-                        padding: 10px 16px;
-                        font-size: 11px;
-                        font-weight: bold;
+                        padding: 8px 16px;
                     }
                     QPushButton:hover {
                         background: rgba(255, 255, 255, 0.05);
+                        color: #ffffff;
                     }
                 """)
+                text_label.setStyleSheet("color: #ffffff; background: transparent;")
+
+            if text == "Bugs":
+                tab.clicked.connect(self.show_bug_report_dialog)
 
             nav_layout.addWidget(tab)
 
-        self.nav_tabs.hide()
+        self.nav_tabs.show()
         title_layout.addWidget(self.nav_tabs)
+
+        # Add stretch after tabs to center them
+        title_layout.addStretch()
 
 
     def _create_vault_controls(self, title_layout):
@@ -551,38 +585,47 @@ class TheVaultApp(QMainWindow):
             }
         """)
 
-        # Bug report button
-        self.bug_report_btn = QPushButton("Bugs")
-        self.bug_report_btn.setFixedSize(60, 32)
-        self.bug_report_btn.setObjectName("userProfileBtn")
-        self.bug_report_btn.clicked.connect(self.show_bug_report_dialog)
-        self.bug_report_btn.setToolTip("Report Bug")
-
-        # Notification bell
-        notification_btn = QPushButton("🔔")
-        notification_btn.setFixedSize(40, 32)
+        # Notification bell with SVG icon
+        notification_btn = QPushButton()
+        notification_btn.setFixedSize(36, 32)
+        bell_icon = SvgIcon.create_icon(Icons.BELL, QSize(16, 16), "#ffffff")
+        notification_btn.setIcon(bell_icon)
+        notification_btn.setIconSize(QSize(16, 16))
         notification_btn.setObjectName("userProfileBtn")
         notification_btn.setToolTip("Notifications")
-
-        # User profile button (square with rounded corners)
-        self.user_profile_btn = QPushButton("A")
-        self.user_profile_btn.setFixedSize(32, 32)
-        self.user_profile_btn.setStyleSheet("""
+        notification_btn.setStyleSheet("""
             QPushButton {
-                background: #4CAF50;
-                border: none;
-                border-radius: 6px;
-                color: white;
-                font-size: 12px;
-                font-weight: bold;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                color: #ffffff;
+                text-align: center;
+                padding: 0px;
             }
             QPushButton:hover {
-                background: #45a049;
+                background: rgba(255, 255, 255, 0.1);
+            }
+        """)
+
+        # User profile button with SVG icon (same style as notification)
+        self.user_profile_btn = QPushButton()
+        self.user_profile_btn.setFixedSize(40, 32)
+        user_icon = SvgIcon.create_icon(Icons.USER, QSize(16, 16), "#ffffff")
+        self.user_profile_btn.setIcon(user_icon)
+        self.user_profile_btn.setToolTip("Profile & Settings")
+        self.user_profile_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                color: #ffffff;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.1);
             }
         """)
 
         user_layout.addWidget(search_bar)
-        user_layout.addWidget(self.bug_report_btn)
         user_layout.addWidget(notification_btn)
         user_layout.addWidget(self.user_profile_btn)
 
