@@ -596,6 +596,187 @@ class VaultWindow(QWidget):
 
         return weak_count > 0
 
+    def show_entry_modal(self, entry_idx, entry, schema):
+        """Show entry details in a modal dialog"""
+        from gui.widgets.modern_widgets import ModernDialog
+
+        # Create modal dialog with proper parent and flags
+        modal = ModernDialog(self, "Entry Details")
+        modal.setFixedSize(500, 600)
+        modal.setModal(True)  # Make it truly modal
+        modal.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowStaysOnTopHint)
+
+        layout = QVBoxLayout(modal)
+        layout.setSpacing(20)
+        layout.setContentsMargins(30, 30, 30, 30)
+
+        # Title
+        title = self.get_entry_display_name(entry, schema)
+        title_label = QLabel(title)
+        title_label.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
+        title_label.setStyleSheet("color: #4CAF50; background: transparent;")
+        layout.addWidget(title_label)
+
+        # Separator
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setStyleSheet("background: rgba(255, 255, 255, 0.2);")
+        layout.addWidget(separator)
+
+        # Entry fields
+        for field in schema:
+            field_value = entry.get(field, "")
+            if field_value:
+                field_container = self.create_modal_field(field, field_value, modal)  # Pass modal as parent
+                layout.addWidget(field_container)
+
+        layout.addStretch()
+
+        # Action buttons at bottom
+        button_layout = QHBoxLayout()
+
+        edit_btn = ModernButton("Edit Entry", primary=False)
+        edit_btn.clicked.connect(lambda: (modal.accept(), self.edit_entry(entry_idx, entry)))
+
+        delete_btn = ModernButton("Delete Entry", primary=False)
+        delete_btn.setStyleSheet("""
+            ModernButton {
+                background: rgba(255, 71, 87, 0.2);
+                border: 2px solid #ff4757;
+                color: #ff4757;
+            }
+            ModernButton:hover {
+                background: rgba(255, 71, 87, 0.3);
+            }
+        """)
+        delete_btn.clicked.connect(lambda: (modal.accept(), self.delete_entry(entry_idx)))
+
+        close_btn = ModernButton("Close", primary=True)
+        close_btn.clicked.connect(modal.accept)
+
+        button_layout.addWidget(edit_btn)
+        button_layout.addWidget(delete_btn)
+        button_layout.addStretch()
+        button_layout.addWidget(close_btn)
+
+        layout.addLayout(button_layout)
+
+        # Show modal (this blocks until closed)
+        modal.exec()
+
+    def create_modal_field(self, field_name, field_value, modal_parent):
+        """Create a field display for the modal"""
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(15)
+
+        # Field label
+        label = QLabel(f"{field_name}:")
+        label.setFont(QFont("Segoe UI", 12, QFont.Weight.Medium))
+        label.setStyleSheet("color: #ffffff; background: transparent;")
+        label.setFixedWidth(100)
+
+        # Field value
+        if field_name.lower() == "password":
+            value_label = QLabel("••••••••")
+            value_label.setStyleSheet("color: #888888; font-family: monospace; background: transparent;")
+
+            # Eye button
+            eye_btn = QPushButton()
+            eye_btn.setFixedSize(32, 32)
+            eye_icon = SvgIcon.create_icon(Icons.EYE, QSize(16, 16), "#ffffff")
+            eye_btn.setIcon(eye_icon)
+            eye_btn.setStyleSheet("""
+                QPushButton {
+                    background: rgba(255, 255, 255, 0.08);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    border-radius: 6px;
+                }
+                QPushButton:hover {
+                    background: rgba(255, 255, 255, 0.15);
+                }
+            """)
+
+            def show_password():
+                def reveal():
+                    value_label.setText(field_value)
+                    value_label.setStyleSheet("color: #ffffff; font-family: monospace; background: transparent;")
+
+                # Create confirmation dialog with modal as parent so it layers properly
+                self.show_password_confirmation_modal(reveal, modal_parent)
+
+            eye_btn.clicked.connect(show_password)
+            layout.addWidget(label)
+            layout.addWidget(value_label, 1)
+            layout.addWidget(eye_btn)
+        else:
+            value_label = QLabel(field_value)
+            value_label.setStyleSheet("color: #ffffff; background: transparent;")
+            layout.addWidget(label)
+            layout.addWidget(value_label, 1)
+
+        # Copy button
+        copy_btn = QPushButton()
+        copy_btn.setFixedSize(32, 32)
+        copy_icon = SvgIcon.create_icon(Icons.COPY, QSize(16, 16), "#ffffff")
+        copy_btn.setIcon(copy_icon)
+        copy_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.15);
+            }
+        """)
+        copy_btn.clicked.connect(lambda: self.copy_to_clipboard(field_value))
+        layout.addWidget(copy_btn)
+
+        return container
+
+    def show_password_confirmation_modal(self, callback, parent_modal):
+        """Show confirmation dialog with proper parent"""
+        from gui.widgets.modern_widgets import ModernDialog, ModernButton
+        from PyQt6.QtWidgets import QVBoxLayout, QLabel, QHBoxLayout
+
+        dialog = ModernDialog(parent_modal, "Show Password")  # Use modal as parent
+        dialog.setFixedSize(350, 180)
+        dialog.setModal(True)
+
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        # Header
+        header_label = QLabel("Show Password")
+        header_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #4CAF50; background: transparent;")
+        layout.addWidget(header_label)
+
+        # Warning message
+        warning_label = QLabel("Are you sure you want to reveal this password?")
+        warning_label.setStyleSheet("color: #ffffff; font-size: 12px; background: transparent;")
+        warning_label.setWordWrap(True)
+        layout.addWidget(warning_label)
+
+        layout.addStretch()
+
+        # Buttons
+        button_layout = QHBoxLayout()
+
+        cancel_btn = ModernButton("Cancel", primary=False)
+        cancel_btn.clicked.connect(dialog.reject)
+
+        show_btn = ModernButton("Show Password", primary=True)
+        show_btn.clicked.connect(lambda: (dialog.accept(), callback()))
+
+        button_layout.addWidget(cancel_btn)
+        button_layout.addWidget(show_btn)
+        layout.addLayout(button_layout)
+
+        dialog.exec()
+
     def get_security_issues(self, vault_data):
         """Get basic security issues"""
         issues = []
@@ -776,11 +957,11 @@ class VaultWindow(QWidget):
         header_section = self.create_entries_header()
         right_layout.addWidget(header_section)
 
-        # Password cards container
+        # Password cards container - BACK TO GRID LAYOUT
         self.cards_container = QWidget()
-        self.cards_layout = QGridLayout(self.cards_container)
+        self.cards_layout = QGridLayout(self.cards_container)  # Back to QGridLayout
         self.cards_layout.setContentsMargins(0, 0, 0, 0)
-        self.cards_layout.setSpacing(16)  # Increased spacing
+        self.cards_layout.setSpacing(16)
         self.cards_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         # Set column stretch to make cards fill available width equally
@@ -825,9 +1006,9 @@ class VaultWindow(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(16)
 
-        # Left side - Just the folder title
-        title_layout = QVBoxLayout()
-        title_layout.setSpacing(4)
+        # Left side - Folder title with subtitle and action icons below
+        left_layout = QVBoxLayout()
+        left_layout.setSpacing(4)
 
         # Main title - just the folder name
         self.folder_title = QLabel("Select a Folder")
@@ -839,92 +1020,101 @@ class VaultWindow(QWidget):
         self.folder_subtitle.setFont(QFont("Segoe UI", 12))
         self.folder_subtitle.setStyleSheet("color: #888888; background: transparent;")
 
-        title_layout.addWidget(self.folder_title)
-        title_layout.addWidget(self.folder_subtitle)
+        # Small action icons below subtitle
+        self.folder_actions_widget = QWidget()
+        actions_layout = QHBoxLayout(self.folder_actions_widget)
+        actions_layout.setContentsMargins(0, 0, 0, 0)
+        actions_layout.setSpacing(8)
 
-        layout.addLayout(title_layout)
+        # Edit icon
+        edit_btn = QPushButton()
+        edit_btn.setFixedSize(24, 24)
+        edit_icon = SvgIcon.create_icon(Icons.EDIT, QSize(16, 16), "#ffffff")
+        edit_btn.setIcon(edit_icon)
+        edit_btn.setIconSize(QSize(16, 16))
+        edit_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.15);
+            }
+        """)
+        edit_btn.clicked.connect(self.edit_folder)
+
+        # Delete icon
+        delete_btn = QPushButton()
+        delete_btn.setFixedSize(24, 24)
+        delete_icon = SvgIcon.create_icon(Icons.DELETE, QSize(16, 16), "#ffffff")
+        delete_btn.setIcon(delete_icon)
+        delete_btn.setIconSize(QSize(16, 16))
+        delete_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.15);
+            }
+        """)
+        delete_btn.clicked.connect(self.delete_folder)
+
+        actions_layout.addWidget(edit_btn)
+        actions_layout.addWidget(delete_btn)
+        actions_layout.addStretch()
+
+        # Hide actions initially
+        self.folder_actions_widget.hide()
+
+        left_layout.addWidget(self.folder_title)
+        left_layout.addWidget(self.folder_subtitle)
+        left_layout.addWidget(self.folder_actions_widget)
+
+        layout.addLayout(left_layout)
         layout.addStretch()
 
-        # Right side - Action buttons
-        buttons_layout = QHBoxLayout()
-        buttons_layout.setSpacing(12)
-
-        # Edit Folder button
-        edit_folder_btn = QPushButton("✏️ Edit Folder")
-        edit_folder_btn.setFixedHeight(40)
-        edit_folder_btn.setStyleSheet("""
+        # Right side - Add Password button only
+        self.add_password_btn = QPushButton("Add Password")
+        self.add_password_btn.setFixedHeight(40)
+        add_icon = SvgIcon.create_icon(Icons.PLUS, QSize(16, 16), "#ffffff")
+        self.add_password_btn.setIcon(add_icon)
+        self.add_password_btn.setIconSize(QSize(16, 16))
+        self.add_password_btn.setStyleSheet("""
             QPushButton {
                 background: rgba(255, 255, 255, 0.08);
                 border: 1px solid rgba(255, 255, 255, 0.15);
                 border-radius: 8px;
                 color: #ffffff;
                 font-size: 12px;
-                font-weight: 500;
-                padding: 0px 16px;
-            }
-            QPushButton:hover {
-                background: rgba(255, 255, 255, 0.12);
-            }
-        """)
-        edit_folder_btn.clicked.connect(self.edit_folder)
-
-        # Delete Folder button
-        delete_folder_btn = QPushButton("🗑️ Delete Folder")
-        delete_folder_btn.setFixedHeight(40)
-        delete_folder_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(255, 71, 87, 0.1);
-                border: 1px solid rgba(255, 71, 87, 0.3);
-                border-radius: 8px;
-                color: #ff4757;
-                font-size: 12px;
-                font-weight: 500;
-                padding: 0px 16px;
-            }
-            QPushButton:hover {
-                background: rgba(255, 71, 87, 0.15);
-            }
-        """)
-        delete_folder_btn.clicked.connect(self.delete_folder)
-
-        # Add Password button
-        add_password_btn = QPushButton("Add Password")
-        add_password_btn.setFixedHeight(40)
-        add_password_btn.setStyleSheet("""
-            QPushButton {
-                background: #4CAF50;
-                border: none;
-                border-radius: 8px;
-                color: white;
-                font-size: 12px;
                 font-weight: 600;
                 padding: 0px 24px;
             }
             QPushButton:hover {
-                background: #45a049;
+                background: rgba(255, 255, 255, 0.15);
             }
         """)
-        add_password_btn.clicked.connect(self.add_entry_to_folder)
+        self.add_password_btn.clicked.connect(self.add_entry_to_folder)
+        self.add_password_btn.hide()  # Hide initially
 
-        buttons_layout.addWidget(edit_folder_btn)
-        buttons_layout.addWidget(delete_folder_btn)
-        buttons_layout.addWidget(add_password_btn)
-
-        layout.addLayout(buttons_layout)
+        layout.addWidget(self.add_password_btn)
 
         return header
 
     def create_password_card(self, entry_idx, entry, schema):
-        """Create password card that matches mockup exactly"""
+        """Create password card that opens modal on click"""
         card = QWidget()
-        card.setFixedHeight(92)
-        card.setMaximumWidth(500)  # Prevent cards from getting too wide
-        card.setMinimumWidth(350)  # Ensure minimum readable width
+        card.setFixedHeight(60)  # Keep consistent collapsed height
+        card.setMaximumWidth(500)
+        card.setMinimumWidth(350)
         card.setStyleSheet("""
             QWidget {
                 background: #3a3a3d;
                 border: none;
                 border-radius: 12px;
+                cursor: pointer;
             }
             QWidget:hover {
                 background: #404043;
@@ -932,125 +1122,24 @@ class VaultWindow(QWidget):
         """)
 
         layout = QHBoxLayout(card)
-        layout.setContentsMargins(20, 16, 16, 16)  # Reduced padding
-        layout.setSpacing(12)  # Reduced spacing
+        layout.setContentsMargins(20, 16, 16, 16)
+        layout.setSpacing(12)
 
-        # Expand arrow (clickable for future expansion)
-        expand_arrow = QPushButton("▶")
-        expand_arrow.setFixedSize(16, 16)
-        expand_arrow.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                border: none;
-                color: #666666;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                color: #4CAF50;
-            }
-        """)
-
-        # Entry info (with text eliding for long content)
-        info_layout = QVBoxLayout()
-        info_layout.setSpacing(2)
-
-        # Title
+        # Just show title when collapsed
         title = self.get_entry_display_name(entry, schema)
         title_label = QLabel(title)
-        title_label.setFont(QFont("Segoe UI", 14, QFont.Weight.Medium))  # Slightly smaller
+        title_label.setFont(QFont("Segoe UI", 14, QFont.Weight.Medium))
         title_label.setStyleSheet("color: #ffffff; background: transparent;")
         title_label.setWordWrap(False)
-        title_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
-        # Username/email
-        username = self.get_entry_username(entry, schema)
-        username_text = username if username else "No username"
-        username_label = QLabel(username_text)
-        username_label.setFont(QFont("Segoe UI", 11))  # Slightly smaller
-        username_label.setStyleSheet("color: #888888; background: transparent;")
-        username_label.setWordWrap(False)
-        username_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        layout.addWidget(title_label, 1)
 
-        # Elide text if too long
-        font_metrics = username_label.fontMetrics()
-        elided_text = font_metrics.elidedText(username_text, Qt.TextElideMode.ElideRight, 200)
-        username_label.setText(elided_text)
+        # Card click opens modal
+        def open_modal(event):
+            self.show_entry_modal(entry_idx, entry, schema)
+            event.accept()
 
-        info_layout.addWidget(title_label)
-        info_layout.addWidget(username_label)
-
-        layout.addWidget(expand_arrow)
-        layout.addLayout(info_layout, 1)  # Takes up remaining space
-
-        # Action buttons (more compact)
-        actions_layout = QHBoxLayout()
-        actions_layout.setSpacing(6)  # Tighter spacing
-
-        # Copy button
-        copy_btn = QPushButton("Copy")
-        copy_btn.setFixedSize(50, 28)
-        copy_icon = SvgIcon.create_icon(Icons.COPY, QSize(12, 12), "#ffffff")
-        copy_btn.setIcon(copy_icon)
-        copy_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(255, 255, 255, 0.08);
-                border: none;
-                border-radius: 6px;
-                color: #ffffff;
-                font-size: 9px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background: rgba(255, 255, 255, 0.12);
-            }
-        """)
-
-        password = self.get_entry_password(entry, schema)
-        copy_btn.clicked.connect(lambda: self.copy_to_clipboard(password))
-
-        # Edit button (icon only)
-        edit_btn = QPushButton()
-        edit_btn.setFixedSize(28, 28)
-        edit_icon = SvgIcon.create_icon(Icons.EDIT, QSize(12, 12), "#ffffff")
-        edit_btn.setIcon(edit_icon)
-        edit_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(255, 255, 255, 0.08);
-                border: none;
-                border-radius: 6px;
-                color: #ffffff;
-                font-size: 11px;
-            }
-            QPushButton:hover {
-                background: rgba(255, 255, 255, 0.12);
-            }
-        """)
-        edit_btn.clicked.connect(lambda: self.edit_entry(entry_idx, entry))
-
-        # Delete button (icon only, red)
-        delete_btn = QPushButton()
-        delete_btn.setFixedSize(28, 28)
-        delete_icon = SvgIcon.create_icon(Icons.DELETE, QSize(12, 12), "#ff4757")
-        delete_btn.setIcon(delete_icon)
-        delete_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(255, 71, 87, 0.1);
-                border: none;
-                border-radius: 6px;
-                color: #ff4757;
-                font-size: 11px;
-            }
-            QPushButton:hover {
-                background: rgba(255, 71, 87, 0.15);
-            }
-        """)
-        delete_btn.clicked.connect(lambda: self.delete_entry(entry_idx))
-
-        actions_layout.addWidget(copy_btn)
-        actions_layout.addWidget(edit_btn)
-        actions_layout.addWidget(delete_btn)
-
-        layout.addLayout(actions_layout)
+        card.mousePressEvent = open_modal
 
         return card
 
@@ -1079,20 +1168,30 @@ class VaultWindow(QWidget):
                 child.widget().deleteLater()
 
         if not self.selected_folder:
-            # Update header for no selection
+            # Update header for no selection and hide buttons
             self.folder_title.setText("Select a Folder")
+            self.folder_subtitle.setText("Choose a folder to view passwords")
+            self.folder_actions_widget.hide()
+            self.add_password_btn.hide()
 
             # Show "no folder selected" message (spans full width)
             no_folder_card = self.create_no_folder_message()
-            self.cards_layout.addWidget(no_folder_card, 0, 0, 1, 2)  # Row 0, col 0, span 1 row, 2 cols
+            self.cards_layout.addWidget(no_folder_card, 0, 0, 1, 2)  # Back to grid positioning
             return
+
+        # Show buttons when folder is selected
+        self.folder_actions_widget.show()
+        self.add_password_btn.show()
 
         # Get folder data
         folder_data = self.vault_data.get("data", {}).get(self.selected_folder)
         if not folder_data:
             self.folder_title.setText("Error")
+            self.folder_subtitle.setText("")
+            self.folder_actions_widget.hide()
+            self.add_password_btn.hide()
             error_card = self.create_error_message(f"Folder '{self.selected_folder}' not found")
-            self.cards_layout.addWidget(error_card, 0, 0, 1, 2)
+            self.cards_layout.addWidget(error_card, 0, 0, 1, 2)  # Back to grid positioning
             return
 
         # Update header with folder info
@@ -1111,7 +1210,7 @@ class VaultWindow(QWidget):
             no_entries_card = self.create_no_entries_message()
             self.cards_layout.addWidget(no_entries_card, 0, 0, 1, 2)
         else:
-            # Add password cards in grid layout (2 per row)
+            # Add password cards in grid layout (2 per row) - BACK TO GRID
             cards_per_row = 2
             for entry_idx, entry in enumerate(entries):
                 row = entry_idx // cards_per_row
@@ -1122,7 +1221,6 @@ class VaultWindow(QWidget):
     def create_no_folder_message(self):
         """Create message widget when no folder is selected"""
         message_card = QWidget()
-        message_card.setFixedHeight(120)
         message_card.setStyleSheet("""
             QWidget {
                 background: transparent;
@@ -1131,10 +1229,17 @@ class VaultWindow(QWidget):
 
         layout = QVBoxLayout(message_card)
         layout.setSpacing(8)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        icon = QLabel("📁")
-        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon.setStyleSheet("font-size: 32px; background: transparent;")
+        # Add stretch at top to push content to center
+        layout.addStretch(2)
+
+        # Use SVG folder icon instead of emoji
+        icon_label = QLabel()
+        folder_icon = SvgIcon.create_icon(Icons.FOLDER, QSize(48, 48), "#666666")
+        icon_label.setPixmap(folder_icon.pixmap(48, 48))
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_label.setStyleSheet("background: transparent;")
 
         title = QLabel("No Folder Selected")
         title.setFont(QFont("Segoe UI", 14, QFont.Weight.Medium))
@@ -1146,9 +1251,12 @@ class VaultWindow(QWidget):
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle.setStyleSheet("color: #888888; background: transparent;")
 
-        layout.addWidget(icon)
+        layout.addWidget(icon_label)
         layout.addWidget(title)
         layout.addWidget(subtitle)
+
+        # Add stretch at bottom to center content vertically
+        layout.addStretch(3)
 
         return message_card
 
