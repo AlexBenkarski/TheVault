@@ -185,106 +185,123 @@ class VaultWindow(QWidget):
         return section
 
     def create_folder_list_item(self, folder_name, password_count, is_selected=False):
-        """Create a folder list item with professional SVG icons"""
+        """Create a folder list item with unified border styling (updated to match enhanced version)"""
+        print(f"Creating old folder list item: {folder_name}, selected: {is_selected}")
         item_container = QWidget()
-        item_container.setFixedHeight(44)
+        item_container.setFixedHeight(50)
+        item_container.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        # Use the same unified border approach as enhanced version
+        if is_selected:
+            item_container.setStyleSheet("""
+                QWidget {
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                        stop:0 rgba(76, 175, 80, 0.15), 
+                        stop:1 rgba(76, 175, 80, 0.08));
+                    border: 2px solid #4CAF50;
+                    border-radius: 8px;
+                }
+                QWidget > QWidget {
+                    border: none !important;
+                    background: transparent !important;
+                }
+                QWidget QLabel {
+                    background: transparent !important;
+                    border: none !important;
+                }
+                QWidget QLabel:hover, QWidget QLabel:focus, QWidget QLabel:pressed {
+                    background: transparent !important;
+                    border: none !important;
+                }
+            """)
+        else:
+            item_container.setStyleSheet("""
+                QWidget {
+                    background: transparent;
+                    border: none;
+                    border-radius: 8px;
+                }
+                QWidget:hover {
+                    background: rgba(255, 255, 255, 0.06);
+                }
+                QWidget > QWidget {
+                    border: none !important;
+                }
+            """)
 
         container_layout = QHBoxLayout(item_container)
-        container_layout.setContentsMargins(0, 0, 0, 0)
-        container_layout.setSpacing(0)
+        container_layout.setContentsMargins(12, 8, 12, 8)
+        container_layout.setSpacing(12)
 
-        item = QPushButton()
-        item.setFixedHeight(44)
-        item.setCursor(Qt.CursorShape.PointingHandCursor)
-
-        button_layout = QHBoxLayout(item)
-        button_layout.setContentsMargins(12, 0, 12, 0)
-        button_layout.setSpacing(12)
-
-        # Icon container with SVG folder icon
+        # Icon container with mouse transparency
         icon_container = QWidget()
-        icon_container.setFixedSize(28, 28)
+        icon_container.setFixedSize(34, 34)
+        icon_container.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
         # Icon colors based on folder name
         icon_colors = {
-            "Gaming": "#ff6b6b", "Battle.net": "#ff6b6b",
-            "Banking": "#ffa726", "Social Media": "#42a5f5",
-            "Work": "#ab47bc", "Personal": "#66bb6a"
+            'Battle.net': '#ff6b6b',
+            'Twitch': '#9146ff',
+            'Epic Games': '#0078f2',
+            'Minecraft': '#00c851',
+            'Gmail': '#ea4335',
+            'Random Pass': '#666666',
+            'Social Media': '#1da1f2',
+            'Banking': '#ffa726',
+            'Work': '#795548'
         }
 
         bg_color = icon_colors.get(folder_name, "#666666")
         icon_container.setStyleSheet(f"""
-            background: {bg_color};
-            border-radius: 6px;
+            QWidget {{
+                background: {bg_color};
+                border-radius: 8px;
+                border: none;
+            }}
         """)
 
         # Create SVG folder icon
         icon_layout = QHBoxLayout(icon_container)
         icon_layout.setContentsMargins(0, 0, 0, 0)
 
-        icon_label = QLabel()
-        folder_svg_icon = SvgIcon.create_icon(Icons.FOLDER, QSize(16, 16), "#ffffff")
-        icon_label.setPixmap(folder_svg_icon.pixmap(16, 16))
+        icon_label = QLabel("📂")
+        icon_label.setStyleSheet("color: white; font-size: 18px; background: transparent; border: none;")
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_label.setStyleSheet("background: transparent;")
+        icon_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         icon_layout.addWidget(icon_label)
 
-        # Folder info
+        # Folder info with mouse transparency
         info_layout = QVBoxLayout()
-        info_layout.setSpacing(2)
-        info_layout.setContentsMargins(0, 0, 0, 0)
+        info_layout.setSpacing(3)
+        info_layout.setContentsMargins(0, 2, 0, 2)
 
         name_label = QLabel(folder_name)
-        name_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
-        name_label.setStyleSheet("color: #ffffff; background: transparent;")
+        name_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Medium))
+        name_label.setStyleSheet("color: #ffffff; background: transparent; border: none;")
+        name_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
-        count_label = QLabel(f"{password_count} passwords")
-        count_label.setFont(QFont("Segoe UI", 9))
-        count_label.setStyleSheet("color: #888888; background: transparent;")
+        count_text = f"{password_count} password{'s' if password_count != 1 else ''}"
+        count_label = QLabel(count_text)
+        count_label.setFont(QFont("Segoe UI", 10))
+        count_color = "#999999"
+        count_label.setStyleSheet(f"color: {count_color}; background: transparent; border: none;")
+        count_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
         info_layout.addWidget(name_label)
         info_layout.addWidget(count_label)
 
-        button_layout.addWidget(icon_container)
-        button_layout.addLayout(info_layout, 1)
+        container_layout.addWidget(icon_container)
+        container_layout.addLayout(info_layout, 1)
 
-        # Selection indicator
-        indicator = QWidget()
-        indicator.setFixedSize(3, 24)
-
-        if is_selected:
-            indicator.setStyleSheet("background: #4CAF50; border-radius: 1px;")
-            item.setStyleSheet("""
-                QPushButton {
-                    background: rgba(76, 175, 80, 0.15);
-                    border: none;
-                    border-radius: 6px;
-                    text-align: left;
-                }
-                QPushButton:hover {
-                    background: rgba(76, 175, 80, 0.2);
-                }
-            """)
-        else:
-            indicator.setStyleSheet("background: transparent;")
-            item.setStyleSheet("""
-                QPushButton {
-                    background: transparent;
-                    border: none;
-                    border-radius: 6px;
-                    text-align: left;
-                }
-                QPushButton:hover {
-                    background: rgba(255, 255, 255, 0.05);
-                }
-            """)
-
-        button_layout.addWidget(indicator)
+        # NO separate indicator - using unified border only
 
         # Connect click handler
-        item.clicked.connect(lambda: self.select_folder(folder_name))
+        def on_folder_click(event):
+            self.select_folder(folder_name)
+            event.accept()
 
-        container_layout.addWidget(item)
+        item_container.mousePressEvent = on_folder_click
+
         return item_container
 
     def create_enhanced_folders_section(self):
@@ -548,7 +565,7 @@ class VaultWindow(QWidget):
         return item
 
     def refresh_folders_enhanced(self):
-        """Enhanced folder refresh for list-style display with proper scrolling"""
+        """Enhanced folder refresh for modern list-style display"""
         # Clear existing folder items
         if hasattr(self, 'folders_list_layout'):
             while self.folders_list_layout.count():
@@ -558,29 +575,219 @@ class VaultWindow(QWidget):
 
             self.folder_buttons.clear()
 
+            # Force clean styling on the container to remove any inherited indicators
+            if hasattr(self, 'folders_container'):
+                self.folders_container.setStyleSheet("""
+                    QWidget {
+                        background: transparent;
+                        border: none;
+                    }
+                    QWidget > QWidget {
+                        border: none;
+                    }
+                """)
+
             # Get vault folders
             vault_folders = list(self.vault_data.get("data", {}).keys())
 
             if not vault_folders:
                 # Show message if no folders
                 no_folders_label = QLabel("No folders yet")
-                no_folders_label.setStyleSheet("color: #888888; font-size: 11px; padding: 12px;")
+                no_folders_label.setStyleSheet("""
+                    color: #888888; 
+                    font-size: 11px; 
+                    background: transparent;
+                    border: none;
+                    padding: 20px;
+                """)
                 no_folders_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.folders_list_layout.addWidget(no_folders_label)
                 return
 
-            # Add folder items
+            # Add enhanced folder items - THIS WAS MISSING!
             for folder_name in vault_folders:
-                folder_data = self.vault_data["data"][folder_name]
-                password_count = len(folder_data.get("entries", []))
+                # Get entry count for this folder
+                folder_data = self.vault_data.get("data", {}).get(folder_name, {})
+                entry_count = len(folder_data.get("entries", []))
+
+                # Check if this folder is selected
                 is_selected = (folder_name == self.selected_folder)
 
-                folder_item = self.create_folder_list_item(folder_name, password_count, is_selected)
+                # Force create our enhanced folder item (not any other method)
+                folder_item = self.create_enhanced_folder_item(folder_name, entry_count, is_selected)
+
+                # Store reference
                 self.folder_buttons[folder_name] = folder_item
+
+                # Add to layout
                 self.folders_list_layout.addWidget(folder_item)
 
-            # Add stretch at the end to ensure proper spacing
+            # Add stretch to push folders to top
             self.folders_list_layout.addStretch()
+
+    def create_enhanced_folder_item(self, folder_name, entry_count, is_selected=False):
+        """Create a modern folder list item with enhanced styling"""
+        item = QWidget()
+        item.setProperty("folderWidget", False)
+        item.setFixedHeight(50)
+        item.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        # Enhanced folder item styling with unified green border for selected items
+        if is_selected:
+            item.setStyleSheet("""
+                QWidget {
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                        stop:0 rgba(76, 175, 80, 0.15), 
+                        stop:1 rgba(76, 175, 80, 0.08));
+                    border: 2px solid #4CAF50;
+                    border-radius: 8px;
+                }
+                QWidget > QWidget {
+                    border: none !important;
+                    background: transparent !important;
+                }
+                QWidget QLabel {
+                    background: transparent !important;
+                    border: none !important;
+                }
+                QWidget QLabel:hover, QWidget QLabel:focus, QWidget QLabel:pressed {
+                    background: transparent !important;
+                    border: none !important;
+                }
+            """)
+        else:
+            item.setStyleSheet("""
+                QWidget {
+                    background: transparent;
+                    border: none;
+                    border-radius: 8px;
+                }
+                QWidget:hover {
+                    background: rgba(255, 255, 255, 0.06);
+                }
+                QWidget > QWidget {
+                    border: none !important;
+                    background: transparent !important;
+                }
+                QWidget QLabel {
+                    background: transparent !important;
+                    border: none !important;
+                }
+                QWidget QLabel:hover, QWidget QLabel:focus, QWidget QLabel:pressed {
+                    background: transparent !important;
+                    border: none !important;
+                }
+            """)
+
+        layout = QHBoxLayout(item)
+        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(12)
+
+        # Enhanced folder icon with mouse transparency
+        icon_container = QWidget()
+        icon_container.setFixedSize(34, 34)
+        icon_container.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+
+        # Improved folder color mapping
+        folder_colors = {
+            'Battle.net': '#ff6b6b',
+            'Twitch': '#9146ff',
+            'Epic Games': '#0078f2',
+            'Minecraft': '#00c851',
+            'Gmail': '#ea4335',
+            'Random Pass': '#666666',
+            'Social Media': '#1da1f2',
+            'Banking': '#ffa726',
+            'Work': '#795548'
+        }
+
+        folder_color = folder_colors.get(folder_name, '#666666')
+
+        icon_container.setStyleSheet(f"""
+            QWidget {{
+                background: {folder_color};
+                border-radius: 8px;
+                border: none;
+            }}
+        """)
+
+        # Better folder icon
+        icon_layout = QVBoxLayout(icon_container)
+        icon_layout.setContentsMargins(0, 0, 0, 0)
+        icon_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Use emoji that displays consistently
+        folder_icon = QLabel("📂")
+        folder_icon.setStyleSheet("color: white; font-size: 18px; background: transparent; border: none;")
+        folder_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        folder_icon.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        icon_layout.addWidget(folder_icon)
+
+        # Enhanced text container with mouse transparency
+        text_container = QWidget()
+        text_container.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        text_layout = QVBoxLayout(text_container)
+        text_layout.setContentsMargins(0, 2, 0, 2)
+        text_layout.setSpacing(3)
+
+        # Enhanced folder name styling - disable mouse events and interactions
+        name_label = QLabel(folder_name)
+        name_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Medium))
+        name_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        name_label.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        name_label.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        name_color = "#ffffff"
+        name_label.setStyleSheet(f"""
+            QLabel {{
+                color: {name_color}; 
+                background: transparent !important; 
+                border: none !important;
+                font-weight: 500;
+            }}
+            QLabel:hover {{
+                background: transparent !important;
+                border: none !important;
+            }}
+        """)
+
+        # Enhanced entry count styling - disable mouse events and interactions
+        count_text = f"{entry_count} password{'s' if entry_count != 1 else ''}"
+        count_label = QLabel(count_text)
+        count_label.setFont(QFont("Segoe UI", 10))
+        count_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        count_label.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        count_label.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        count_color = "#999999"
+        count_label.setStyleSheet(f"""
+            QLabel {{
+                color: #999999 !important; 
+                background: transparent !important; 
+                border: none !important;
+                font-weight: 400;
+            }}
+            QLabel:hover, QLabel:focus, QLabel:pressed, QLabel:selected {{
+                color: #999999 !important;
+                background: transparent !important;
+                border: none !important;
+            }}
+        """)
+
+        text_layout.addWidget(name_label)
+        text_layout.addWidget(count_label)
+
+        layout.addWidget(icon_container)
+        layout.addWidget(text_container, 1)
+
+        # No indicator widget - unified border only!
+
+        # Enhanced click handler
+        def on_folder_click(event):
+            self.select_folder(folder_name)
+            event.accept()
+
+        item.mousePressEvent = on_folder_click
+
+        return item
 
     def check_security_issues(self, vault_data):
         """Quick check for security issues"""

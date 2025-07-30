@@ -61,3 +61,6 @@ analytics_data.json
 gui/vaultfirebase.json
 gui/secrets.enc
 gui/vaultfirebase.enc
+
+
+temp_sign/

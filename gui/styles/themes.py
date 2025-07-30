@@ -199,14 +199,6 @@ QLabel#folderCount {
     background: transparent;
 }
 
-QWidget#folderIndicator[selected="true"] {
-    background: #4CAF50;
-    border-radius: 1px;
-}
-
-QWidget#folderIndicator {
-    background: transparent;
-}
 
 /* ===========================================
    PASSWORD CARDS
