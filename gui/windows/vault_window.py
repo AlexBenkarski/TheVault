@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea,
                              QFrame, QPushButton, QGroupBox, QGridLayout, QDialog,
                              QLineEdit, QTextEdit, QMessageBox, QFileDialog, QSizePolicy)
-from PyQt6.QtCore import Qt, pyqtSignal, QDateTime, QSize
+from PyQt6.QtCore import Qt, pyqtSignal, QDateTime, QSize, QTimer
 from PyQt6.QtGui import QFont
 
 from gui.update_manager import get_current_version
@@ -87,30 +87,34 @@ class VaultWindow(QWidget):
         return left_widget
 
     def create_security_health_section(self):
-        """Create the security health status panel - updated to match target"""
+        """Create enhanced security health status panel with better styling"""
         section = QWidget()
-        section.setFixedHeight(110)  # Increased from 80 to fit all content
+        section.setFixedHeight(140)  # Expanded height for more content
+
+        # Enhanced styling with gradient background and stronger border
         section.setStyleSheet("""
             QWidget {
-                background: rgba(76, 175, 80, 0.1);
-                border-radius: 8px;
-                border: none;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(76, 175, 80, 0.15), 
+                    stop:1 rgba(76, 175, 80, 0.08));
+                border: 2px solid rgba(76, 175, 80, 0.3);
+                border-radius: 12px;
             }
         """)
 
         layout = QVBoxLayout(section)
-        layout.setContentsMargins(16, 12, 16, 12)
-        layout.setSpacing(6)  # Increased spacing between lines
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(8)
 
-        # Header row - removed caution emoji
+        # Header row with enhanced status
         header_layout = QHBoxLayout()
         header_layout.setSpacing(0)
 
         title = QLabel("Quick Health")
-        title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
         title.setStyleSheet("color: #ffffff; background: transparent; border: none;")
 
-        # Status without emoji
+        # Dynamic status based on vault data
         vault_data = getattr(self, 'vault_data', {}).get('data', {})
         has_issues = self.check_security_issues(vault_data)
 
@@ -120,9 +124,11 @@ class VaultWindow(QWidget):
         status_label = QLabel(status_text)
         status_label.setStyleSheet(f"""
             color: {status_color};
-            font-size: 11px;
-            font-weight: 600;
-            background: transparent;
+            font-size: 12px;
+            font-weight: 700;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
             border: none;
         """)
 
@@ -131,7 +137,6 @@ class VaultWindow(QWidget):
         header_layout.addWidget(status_label)
         layout.addLayout(header_layout)
 
-        # Add back all the original content
         # Weak Passwords line
         weak_layout = QHBoxLayout()
         weak_label = QLabel("Weak Passwords:")
@@ -151,11 +156,11 @@ class VaultWindow(QWidget):
         sync_layout = QHBoxLayout()
         sync_label = QLabel("Last Sync:")
         sync_label.setFont(QFont("Segoe UI", 10))
-        sync_label.setStyleSheet("color: #888888; background: transparent; border: none;")
+        sync_label.setStyleSheet("color: #b0b0b0; background: transparent; border: none;")
 
         sync_time = QLabel("2 min ago")
         sync_time.setFont(QFont("Segoe UI", 10))
-        sync_time.setStyleSheet("color: #888888; background: transparent; border: none;")
+        sync_time.setStyleSheet("color: #4CAF50; background: transparent; border: none;")
 
         sync_layout.addWidget(sync_label)
         sync_layout.addStretch()
@@ -166,7 +171,7 @@ class VaultWindow(QWidget):
         backup_layout = QHBoxLayout()
         backup_label = QLabel("Backup Status:")
         backup_label.setFont(QFont("Segoe UI", 10))
-        backup_label.setStyleSheet("color: #4CAF50; background: transparent; border: none;")
+        backup_label.setStyleSheet("color: #b0b0b0; background: transparent; border: none;")
 
         backup_status = QLabel("OneDrive ✓")
         backup_status.setFont(QFont("Segoe UI", 10))
@@ -598,54 +603,76 @@ class VaultWindow(QWidget):
 
     def show_entry_modal(self, entry_idx, entry, schema):
         """Show entry details in a modal dialog"""
-        from gui.widgets.modern_widgets import ModernDialog
+        from gui.widgets.modern_widgets import ModernDialog, ModernButton
+        from PyQt6.QtWidgets import QVBoxLayout, QLabel, QHBoxLayout, QFrame
+        from PyQt6.QtGui import QFont
+        from PyQt6.QtCore import Qt
 
-        # Create modal dialog with proper parent and flags
+        # Calculate height based on number of fields (more compact)
+        field_count = len([field for field in schema if entry.get(field, "")])
+        base_height = 180  # Header + buttons + padding
+        field_height = field_count * 60  # Each field takes ~60px
+        total_height = base_height + field_height
+
+        # Create modal dialog with proper sizing
         modal = ModernDialog(self, "Entry Details")
-        modal.setFixedSize(500, 600)
-        modal.setModal(True)  # Make it truly modal
-        modal.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowStaysOnTopHint)
+        modal.setFixedSize(450, total_height)  # Narrower and dynamic height
+        modal.setModal(True)
+        # DON'T set custom window flags - let ModernDialog handle it
 
-        layout = QVBoxLayout(modal)
-        layout.setSpacing(20)
-        layout.setContentsMargins(30, 30, 30, 30)
-
-        # Title
+        # Use the standard layout method like other modals
         title = self.get_entry_display_name(entry, schema)
-        title_label = QLabel(title)
-        title_label.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
-        title_label.setStyleSheet("color: #4CAF50; background: transparent;")
-        layout.addWidget(title_label)
-
-        # Separator
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setStyleSheet("background: rgba(255, 255, 255, 0.2);")
-        layout.addWidget(separator)
+        layout = modal.setup_basic_layout(title)
+        layout.addSpacing(10)
 
         # Entry fields
         for field in schema:
             field_value = entry.get(field, "")
             if field_value:
-                field_container = self.create_modal_field(field, field_value, modal)  # Pass modal as parent
+                field_container = self.create_modal_field(field, field_value, modal)
                 layout.addWidget(field_container)
 
         layout.addStretch()
 
-        # Action buttons at bottom
+        # Action buttons at bottom using icons
+        from gui.widgets.svg_icons import SvgIcon, Icons
+        from PyQt6.QtWidgets import QPushButton
+        from PyQt6.QtCore import QSize
+
         button_layout = QHBoxLayout()
 
-        edit_btn = ModernButton("Edit Entry", primary=False)
+        # Edit button with icon
+        edit_btn = QPushButton()
+        edit_btn.setFixedSize(40, 40)
+        edit_icon = SvgIcon.create_icon(Icons.EDIT, QSize(18, 18), "#ffffff")
+        edit_btn.setIcon(edit_icon)
+        edit_btn.setToolTip("Edit Entry")
+        edit_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.1);
+                border: 2px solid rgba(255, 255, 255, 0.25);
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.15);
+                border: 2px solid rgba(255, 255, 255, 0.35);
+            }
+        """)
         edit_btn.clicked.connect(lambda: (modal.accept(), self.edit_entry(entry_idx, entry)))
 
-        delete_btn = ModernButton("Delete Entry", primary=False)
+        # Delete button with icon
+        delete_btn = QPushButton()
+        delete_btn.setFixedSize(40, 40)
+        delete_icon = SvgIcon.create_icon(Icons.DELETE, QSize(18, 18), "#ffffff")
+        delete_btn.setIcon(delete_icon)
+        delete_btn.setToolTip("Delete Entry")
         delete_btn.setStyleSheet("""
-            ModernButton {
+            QPushButton {
                 background: rgba(255, 71, 87, 0.2);
                 border: 2px solid #ff4757;
-                color: #ff4757;
+                border-radius: 8px;
             }
-            ModernButton:hover {
+            QPushButton:hover {
                 background: rgba(255, 71, 87, 0.3);
             }
         """)
@@ -665,7 +692,12 @@ class VaultWindow(QWidget):
         modal.exec()
 
     def create_modal_field(self, field_name, field_value, modal_parent):
-        """Create a field display for the modal"""
+        """Create a field display for the modal with proper eye toggle functionality"""
+        from gui.widgets.svg_icons import SvgIcon, Icons
+        from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
+        from PyQt6.QtGui import QFont
+        from PyQt6.QtCore import QSize
+
         container = QWidget()
         layout = QHBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -682,10 +714,15 @@ class VaultWindow(QWidget):
             value_label = QLabel("••••••••")
             value_label.setStyleSheet("color: #888888; font-family: monospace; background: transparent;")
 
-            # Eye button
+            # Eye button with proper toggle state
             eye_btn = QPushButton()
             eye_btn.setFixedSize(32, 32)
+
+            # Create both icons
             eye_icon = SvgIcon.create_icon(Icons.EYE, QSize(16, 16), "#ffffff")
+            eye_off_icon = SvgIcon.create_icon(Icons.EYE_OFF, QSize(16, 16), "#ffffff")
+
+            # Set initial state
             eye_btn.setIcon(eye_icon)
             eye_btn.setStyleSheet("""
                 QPushButton {
@@ -698,15 +735,33 @@ class VaultWindow(QWidget):
                 }
             """)
 
-            def show_password():
-                def reveal():
-                    value_label.setText(field_value)
-                    value_label.setStyleSheet("color: #ffffff; font-family: monospace; background: transparent;")
+            # Track visibility state on the button itself
+            eye_btn.password_visible = False
 
-                # Create confirmation dialog with modal as parent so it layers properly
-                self.show_password_confirmation_modal(reveal, modal_parent)
+            def toggle_password():
+                if not eye_btn.password_visible:
+                    # Show confirmation before revealing
+                    def reveal():
+                        value_label.setText(field_value)
+                        value_label.setStyleSheet("color: #ffffff; font-family: monospace; background: transparent;")
+                        # Change to eye-off icon
+                        eye_btn.setIcon(eye_off_icon)
+                        eye_btn.setToolTip("Hide password")
+                        eye_btn.password_visible = True
 
-            eye_btn.clicked.connect(show_password)
+                    self.show_password_confirmation_modal(reveal, modal_parent)
+                else:
+                    # Hide password directly (no confirmation needed)
+                    value_label.setText("••••••••")
+                    value_label.setStyleSheet("color: #888888; font-family: monospace; background: transparent;")
+                    # Change back to eye icon
+                    eye_btn.setIcon(eye_icon)
+                    eye_btn.setToolTip("Show password")
+                    eye_btn.password_visible = False
+
+            eye_btn.clicked.connect(toggle_password)
+            eye_btn.setToolTip("Show password")
+
             layout.addWidget(label)
             layout.addWidget(value_label, 1)
             layout.addWidget(eye_btn)
@@ -716,7 +771,7 @@ class VaultWindow(QWidget):
             layout.addWidget(label)
             layout.addWidget(value_label, 1)
 
-        # Copy button
+        # Copy button with feedback animation
         copy_btn = QPushButton()
         copy_btn.setFixedSize(32, 32)
         copy_icon = SvgIcon.create_icon(Icons.COPY, QSize(16, 16), "#ffffff")
@@ -731,19 +786,69 @@ class VaultWindow(QWidget):
                 background: rgba(255, 255, 255, 0.15);
             }
         """)
-        copy_btn.clicked.connect(lambda: self.copy_to_clipboard(field_value))
+
+        def copy_with_feedback():
+            # Copy to clipboard
+            self.copy_to_clipboard(field_value)
+
+            # Show checkmark feedback
+            from PyQt6.QtCore import QTimer
+            check_icon = SvgIcon.create_icon(Icons.SECURITY, QSize(16, 16),
+                                             "#4CAF50")  # Using SECURITY icon which has checkmark
+            copy_btn.setIcon(check_icon)
+            copy_btn.setStyleSheet("""
+                QPushButton {
+                    background: rgba(76, 175, 80, 0.2);
+                    border: 1px solid #4CAF50;
+                    border-radius: 6px;
+                }
+            """)
+
+            # Reset to original after 1 second
+            def reset_icon():
+                copy_btn.setIcon(copy_icon)
+                copy_btn.setStyleSheet("""
+                    QPushButton {
+                        background: rgba(255, 255, 255, 0.08);
+                        border: 1px solid rgba(255, 255, 255, 0.15);
+                        border-radius: 6px;
+                    }
+                    QPushButton:hover {
+                        background: rgba(255, 255, 255, 0.15);
+                    }
+                """)
+
+            QTimer.singleShot(1000, reset_icon)
+
+        copy_btn.clicked.connect(copy_with_feedback)
+        copy_btn.setToolTip(f"Copy {field_name.lower()}")
         layout.addWidget(copy_btn)
 
         return container
 
     def show_password_confirmation_modal(self, callback, parent_modal):
-        """Show confirmation dialog with proper parent"""
+        """Show confirmation dialog with proper parent and click-outside-to-close"""
         from gui.widgets.modern_widgets import ModernDialog, ModernButton
         from PyQt6.QtWidgets import QVBoxLayout, QLabel, QHBoxLayout
+        from PyQt6.QtCore import Qt
 
-        dialog = ModernDialog(parent_modal, "Show Password")  # Use modal as parent
+        dialog = ModernDialog(parent_modal, "Show Password")
         dialog.setFixedSize(350, 180)
         dialog.setModal(True)
+
+        # Enable click outside to close by connecting backdrop
+        def handle_mouse_press(event):
+            # Check if click is outside the dialog content area
+            if event.button() == Qt.MouseButton.LeftButton:
+                widget_under_cursor = dialog.childAt(event.pos())
+                if widget_under_cursor is None:
+                    dialog.reject()
+                    return
+            # Call the original event handler for normal behavior
+            QDialog.mousePressEvent(dialog, event)
+
+        from PyQt6.QtWidgets import QDialog
+        dialog.mousePressEvent = handle_mouse_press
 
         layout = QVBoxLayout(dialog)
         layout.setSpacing(15)
@@ -1104,39 +1209,86 @@ class VaultWindow(QWidget):
         return header
 
     def create_password_card(self, entry_idx, entry, schema):
-        """Create password card that opens modal on click"""
+        """Create modern password card with proper styling and hover effects"""
         card = QWidget()
-        card.setFixedHeight(60)  # Keep consistent collapsed height
+        card.setFixedHeight(100)  # Increased height for better proportions
         card.setMaximumWidth(500)
         card.setMinimumWidth(350)
+
+        # Modern card styling with depth, elevation, and shadows
         card.setStyleSheet("""
             QWidget {
-                background: #3a3a3d;
-                border: none;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #404043, stop:1 #373739);
+                border: 1px solid rgba(255, 255, 255, 0.12);
                 border-radius: 12px;
                 cursor: pointer;
             }
             QWidget:hover {
-                background: #404043;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #4a4a4d, stop:1 #404043);
+                border: 1px solid rgba(255, 255, 255, 0.25);
             }
         """)
 
-        layout = QHBoxLayout(card)
-        layout.setContentsMargins(20, 16, 16, 16)
-        layout.setSpacing(12)
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(20, 16, 20, 16)
+        layout.setSpacing(8)
 
-        # Just show title when collapsed
+        # Top row - Title and status indicator
+        top_row = QHBoxLayout()
+        top_row.setSpacing(0)
+
+        # Entry title (larger and more prominent, no borders)
         title = self.get_entry_display_name(entry, schema)
         title_label = QLabel(title)
-        title_label.setFont(QFont("Segoe UI", 14, QFont.Weight.Medium))
-        title_label.setStyleSheet("color: #ffffff; background: transparent;")
+        title_label.setFont(QFont("Segoe UI", 15, QFont.Weight.DemiBold))
+        title_label.setStyleSheet("""
+            color: #ffffff; 
+            background: transparent;
+            font-weight: 600;
+            border: none;
+            padding: 0px;
+        """)
         title_label.setWordWrap(False)
 
-        layout.addWidget(title_label, 1)
+        top_row.addWidget(title_label)
+        top_row.addStretch()
 
-        # Card click opens modal
+        layout.addLayout(top_row)
+
+        # Bottom row - Username/email as plain text (no input field)
+        username = self.get_entry_username(entry, schema)
+        if username:
+            username_label = QLabel(username)
+            username_label.setFont(QFont("Segoe UI", 12))
+            username_label.setStyleSheet("""
+                color: #b0b0b0; 
+                background: transparent;
+                font-weight: 400;
+                border: none;
+                padding: 0px;
+            """)
+            username_label.setWordWrap(False)
+            layout.addWidget(username_label)
+        else:
+            # If no username, add spacing to maintain card height
+            layout.addSpacing(18)
+
+        layout.addStretch()
+
+        # Card click handler with smooth animation feel
         def open_modal(event):
-            self.show_entry_modal(entry_idx, entry, schema)
+            # Add subtle visual feedback before opening modal
+            card.setStyleSheet(card.styleSheet() + """
+                QWidget {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #4a4a4d, stop:1 #454548);
+                }
+            """)
+
+            # Open modal after brief delay for visual feedback
+            QTimer.singleShot(50, lambda: self.show_entry_modal(entry_idx, entry, schema))
             event.accept()
 
         card.mousePressEvent = open_modal
