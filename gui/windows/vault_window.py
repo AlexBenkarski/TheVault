@@ -63,7 +63,7 @@ class VaultWindow(QWidget):
         left_widget.setStyleSheet("""
             QWidget {
                 background: #1a1a1d;
-                border-right: 1px solid rgba(255, 255, 255, 0.08);
+                border-right: none;
             }
         """)
 
@@ -185,36 +185,22 @@ class VaultWindow(QWidget):
         return section
 
     def create_folder_list_item(self, folder_name, password_count, is_selected=False):
-        """Create a folder list item with unified border styling (updated to match enhanced version)"""
-        print(f"Creating old folder list item: {folder_name}, selected: {is_selected}")
+        print(f"Creating folder item: {folder_name}, selected: {is_selected}")
         item_container = QWidget()
         item_container.setFixedHeight(50)
         item_container.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        # Use the same unified border approach as enhanced version
         if is_selected:
+            print(f"APPLYING GREEN STYLE to {folder_name}")
             item_container.setStyleSheet("""
                 QWidget {
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 rgba(76, 175, 80, 0.15), 
-                        stop:1 rgba(76, 175, 80, 0.08));
+                    background: rgba(76, 175, 80, 0.2);
                     border: 2px solid #4CAF50;
                     border-radius: 8px;
                 }
-                QWidget > QWidget {
-                    border: none !important;
-                    background: transparent !important;
-                }
-                QWidget QLabel {
-                    background: transparent !important;
-                    border: none !important;
-                }
-                QWidget QLabel:hover, QWidget QLabel:focus, QWidget QLabel:pressed {
-                    background: transparent !important;
-                    border: none !important;
-                }
             """)
         else:
+            print(f"APPLYING DEFAULT STYLE to {folder_name}")
             item_container.setStyleSheet("""
                 QWidget {
                     background: transparent;
@@ -224,22 +210,19 @@ class VaultWindow(QWidget):
                 QWidget:hover {
                     background: rgba(255, 255, 255, 0.06);
                 }
-                QWidget > QWidget {
-                    border: none !important;
-                }
             """)
 
         container_layout = QHBoxLayout(item_container)
         container_layout.setContentsMargins(12, 8, 12, 8)
         container_layout.setSpacing(12)
 
-        # Icon container with mouse transparency
+        # Enhanced folder icon with mouse transparency
         icon_container = QWidget()
         icon_container.setFixedSize(34, 34)
         icon_container.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
-        # Icon colors based on folder name
-        icon_colors = {
+        # Improved folder color mapping
+        folder_colors = {
             'Battle.net': '#ff6b6b',
             'Twitch': '#9146ff',
             'Epic Games': '#0078f2',
@@ -251,24 +234,27 @@ class VaultWindow(QWidget):
             'Work': '#795548'
         }
 
-        bg_color = icon_colors.get(folder_name, "#666666")
+        folder_color = folder_colors.get(folder_name, '#666666')
+
         icon_container.setStyleSheet(f"""
             QWidget {{
-                background: {bg_color};
+                background: {folder_color};
                 border-radius: 8px;
                 border: none;
             }}
         """)
 
-        # Create SVG folder icon
-        icon_layout = QHBoxLayout(icon_container)
+        # Better folder icon
+        icon_layout = QVBoxLayout(icon_container)
         icon_layout.setContentsMargins(0, 0, 0, 0)
+        icon_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        icon_label = QLabel("📂")
-        icon_label.setStyleSheet("color: white; font-size: 18px; background: transparent; border: none;")
-        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        icon_layout.addWidget(icon_label)
+        # Use emoji that displays consistently
+        folder_icon = QLabel("📂")
+        folder_icon.setStyleSheet("color: white; font-size: 18px; background: transparent; border: none;")
+        folder_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        folder_icon.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        icon_layout.addWidget(folder_icon)
 
         # Folder info with mouse transparency
         info_layout = QVBoxLayout()
@@ -293,8 +279,6 @@ class VaultWindow(QWidget):
         container_layout.addWidget(icon_container)
         container_layout.addLayout(info_layout, 1)
 
-        # NO separate indicator - using unified border only
-
         # Connect click handler
         def on_folder_click(event):
             self.select_folder(folder_name)
@@ -317,24 +301,25 @@ class VaultWindow(QWidget):
 
         folders_title = QLabel("FOLDERS")
         folders_title.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
-        folders_title.setStyleSheet("color: #ffffff; background: transparent; letter-spacing: 0.5px;")
+        folders_title.setStyleSheet("color: #ffffff; background: transparent; border: none; letter-spacing: 0.5px;")
 
-        add_folder_btn = QPushButton("+")
-        add_folder_btn.setFixedSize(20, 20)
+        add_folder_btn = QPushButton("Add Folder")
+        add_folder_btn.setFixedHeight(28)
+        add_icon = SvgIcon.create_icon(Icons.PLUS, QSize(16, 16), "#ffffff")
+        add_folder_btn.setIcon(add_icon)
+        add_folder_btn.setIconSize(QSize(16, 16))
         add_folder_btn.setStyleSheet("""
             QPushButton {
-                background: rgba(255, 255, 255, 0.1);
-                border: none;
-                border-radius: 10px;
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 6px;  /* Smaller radius too */
                 color: #ffffff;
-                font-size: 12px;
-                font-weight: bold;
+                font-size: 11px;     /* Smaller font */
+                font-weight: 600;
+                padding: 0px 16px;   /* Less padding */
             }
             QPushButton:hover {
-                background: rgba(255, 255, 255, 0.2);
-            }
-            QPushButton:focus {
-                outline: none;
+                background: rgba(255, 255, 255, 0.15);
             }
         """)
         add_folder_btn.clicked.connect(self.add_folder)
@@ -360,24 +345,31 @@ class VaultWindow(QWidget):
             QScrollArea > QWidget > QWidget {
                 background: transparent;
             }
+            QScrollArea::corner {
+                background: transparent;
+                border: none;
+            }
             QScrollBar:vertical {
                 background: rgba(255, 255, 255, 0.05);
-                width: 8px;
-                border-radius: 4px;
+                width: 6px;
+                border-radius: 3px;
                 margin: 0px;
+                border: none;
             }
             QScrollBar::handle:vertical {
-                background: rgba(255, 255, 255, 0.2);
-                border-radius: 4px;
-                min-height: 20px;
-            }
-            QScrollBar::handle:vertical:hover {
                 background: rgba(255, 255, 255, 0.3);
+                border-radius: 3px;
+                min-height: 20px;
+                border: none;
             }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                border: none;
-                background: none;
                 height: 0px;
+                background: none;
+                border: none;
+            }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: none;
+                border: none;
             }
         """)
 
@@ -518,7 +510,7 @@ class VaultWindow(QWidget):
         # Activity items
         activities = [
             ("Steam password updated", "2 min ago"),
-            ("Alice shared Netflix", "1 hour ago"),
+            ("Folder deleted", "30 min ago"),
             ("New folder created", "Yesterday")
         ]
 
@@ -614,7 +606,7 @@ class VaultWindow(QWidget):
                 is_selected = (folder_name == self.selected_folder)
 
                 # Force create our enhanced folder item (not any other method)
-                folder_item = self.create_enhanced_folder_item(folder_name, entry_count, is_selected)
+                folder_item = self.create_folder_list_item(folder_name, entry_count, is_selected)
 
                 # Store reference
                 self.folder_buttons[folder_name] = folder_item
@@ -626,6 +618,7 @@ class VaultWindow(QWidget):
             self.folders_list_layout.addStretch()
 
     def create_enhanced_folder_item(self, folder_name, entry_count, is_selected=False):
+        print(f"Creating folder item: {folder_name}, selected: {is_selected}")
         """Create a modern folder list item with enhanced styling"""
         item = QWidget()
         item.setProperty("folderWidget", False)
@@ -1206,38 +1199,36 @@ class VaultWindow(QWidget):
         scroll_area.setStyleSheet("""
             QScrollArea {
                 border: none;
-                background: #2d2d30;  /* Solid color instead of transparent */
+                background: transparent;
             }
             QScrollArea > QWidget > QWidget {
-                background: #2d2d30;  /* Target the internal content widget */
+                background: transparent;
+            }
+            QScrollArea::corner {
+                background: transparent;
+                border: none;
             }
             QScrollBar:vertical {
-                background-color: #2d2d30;  /* Use background-color instead */
-                width: 12px;
-                border-radius: 6px;
+                background: rgba(255, 255, 255, 0.05);
+                width: 6px;
+                border-radius: 3px;
                 margin: 0px;
                 border: none;
             }
             QScrollBar::handle:vertical {
-                background-color: rgba(255, 255, 255, 0.2);
-                border-radius: 6px;
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 3px;
                 min-height: 20px;
                 border: none;
             }
-            QScrollBar::handle:vertical:hover {
-                background-color: rgba(255, 255, 255, 0.3);
-            }
-            QScrollBar::handle:vertical:pressed {
-                background-color: rgba(255, 255, 255, 0.4);
-            }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                border: none;
-                background: none;
                 height: 0px;
-                width: 0px;
+                background: none;
+                border: none;
             }
-            QScrollBar::sub-page:vertical, QScrollBar::add-page:vertical {
-                background: #2d2d30;  /* This targets the track areas */
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: none;
+                border: none;
             }
         """)
 
@@ -1835,8 +1826,6 @@ class VaultWindow(QWidget):
 
     def select_folder(self, folder_name):
         self.selected_folder = folder_name
-
-        # CHANGE: Use enhanced refresh to update styling
         self.refresh_folders_enhanced()
         self.refresh_entries_cards()
 

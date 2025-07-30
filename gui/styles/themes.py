@@ -494,32 +494,26 @@ QCheckBox::indicator:checked {
    SCROLLBARS
    =========================================== */
 
-QScrollArea {
-    border: none;
-    background: transparent;
-}
-
 QScrollBar:vertical {
-    background: rgba(255, 255, 255, 0.1);
-    width: 12px;
-    border-radius: 6px;
-    margin: 0px;
+    background: rgba(255, 255, 255, 0.05);
+    width: 6px;  /* Thinner */
+    border-radius: 3px;
+    margin: 2px;
 }
-
 QScrollBar::handle:vertical {
     background: rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
+    border-radius: 3px;
     min-height: 20px;
 }
-
 QScrollBar::handle:vertical:hover {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.4);
 }
-
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-    border: none;
-    background: none;
     height: 0px;
+    background: none;
+}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
 }
 
 /* ===========================================
