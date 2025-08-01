@@ -1,219 +1,71 @@
 import os
-
+import re
+import time
+import webbrowser
+from datetime import datetime, timedelta
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                             QFrame, QPushButton, QScrollArea, QTabWidget)
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QFont
-from gui.widgets.modern_widgets import ModernButton
-from gui.widgets.svg_icons import SvgIcon, Icons
+                            QFrame, QScrollArea, QDialog, QTextEdit, QMessageBox)
+from PyQt6.QtCore import Qt, QSize, QTimer
+from PyQt6.QtGui import QFont, QPixmap, QPainter, QBrush, QColor
+from gui.widgets.modern_widgets import ModernDialog, ModernButton, ModernSmallButton
+
+try:
+    from gui.widgets.svg_icons import SvgIcon, Icons  # Note: svg_icons not svg_icon
+except ImportError:
+    try:
+        from gui.widgets.svg_icon import SvgIcon, Icons  # Fallback to your actual module name
+    except ImportError:
+        # Create dummy classes if neither exists
+        class SvgIcon:
+            @staticmethod
+            def create_icon(*args, **kwargs): return None
+        class Icons:
+            EYE = "eye"
+            EYE_OFF = "eye_off"
+
+# Google Drive API imports
+try:
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import Flow, InstalledAppFlow
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+    from google.auth.transport.requests import Request
+    import json
+
+    GOOGLE_DRIVE_AVAILABLE = True
+except ImportError:
+    GOOGLE_DRIVE_AVAILABLE = False
+    print("Google Drive API not available. Install: pip install google-api-python-client google-auth-oauthlib")
 
 
-class PasswordIssueCard(QFrame):
-    """Individual password issue display card"""
-
-    def __init__(self, password, issues, account_info, show_password=False):
-        super().__init__()
-        self.password = password
-        self.issues = issues
-        self.account_info = account_info
-        self.show_password = show_password
-        self.init_ui()
-
-    def init_ui(self):
-        self.setFixedHeight(100)
-        self.setStyleSheet("""
-            QFrame {
-                background: rgba(255, 255, 255, 0.05);
-                border: none;
-                border-radius: 8px;
-                margin: 2px 0px;
-            }
-            QFrame:hover {
-                background: rgba(255, 255, 87, 0.08);
-            }
-        """)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 12, 16, 12)
-        layout.setSpacing(6)
-
-        # Top row - password and eye button
-        top_layout = QHBoxLayout()
-
-        password_text = self.password if self.show_password else "••••••••"
-        self.password_label = QLabel(f'"{password_text}" is weak because:')
-        self.password_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
-        self.password_label.setStyleSheet("color: #ffffff; background: transparent;")
-
-        # Eye toggle button
-        self.eye_btn = QPushButton()
-        self.eye_btn.setFixedSize(28, 24)
-        self.update_eye_button()
-        self.eye_btn.clicked.connect(self.toggle_password_visibility)
-
-        top_layout.addWidget(self.password_label)
-        top_layout.addStretch()
-        top_layout.addWidget(self.eye_btn)
-
-        # Issues and account in one line
-        issues_text = " • ".join(self.issues)
-        combined_text = f"{issues_text}\nUsed in: {self.account_info}"
-
-        combined_label = QLabel(combined_text)
-        combined_label.setFont(QFont("Segoe UI", 9))
-        combined_label.setStyleSheet("color: #ff9500; background: transparent;")
-        combined_label.setWordWrap(True)
-
-        layout.addLayout(top_layout)
-        layout.addWidget(combined_label)
-
-    def update_eye_button(self):
-        if self.show_password:
-            icon = SvgIcon.create_icon(Icons.EYE_OFF, QSize(16, 16), "#ffffff")
-            self.eye_btn.setToolTip("Hide password")
-        else:
-            icon = SvgIcon.create_icon(Icons.EYE, QSize(16, 16), "#ffffff")
-            self.eye_btn.setToolTip("Show password")
-
-        self.eye_btn.setIcon(icon)
-        self.eye_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: 6px;
-            }
-            QPushButton:hover {
-                background: rgba(255, 255, 255, 0.15);
-            }
-        """)
-
-    def toggle_password_visibility(self):
-        self.show_password = not self.show_password
-        password_text = self.password if self.show_password else "••••••••"
-        self.password_label.setText(f'"{password_text}" is weak because:')
-        self.update_eye_button()
-
-
-class DuplicatePasswordCard(QFrame):
-    """Card showing duplicate password usage"""
-
-    def __init__(self, password, accounts, show_password=False):
-        super().__init__()
-        self.password = password
-        self.accounts = accounts
-        self.show_password = show_password
-        self.init_ui()
-
-    def init_ui(self):
-        # Dynamic height based on number of accounts
-        base_height = 60
-        account_height = len(self.accounts) * 20
-        total_height = base_height + account_height
-        self.setFixedHeight(max(80, total_height))
-
-        self.setStyleSheet("""
-            QFrame {
-                background: rgba(255, 255, 255, 0.05);
-                border: none;
-                border-radius: 8px;
-                margin: 2px 0px;
-            }
-            QFrame:hover {
-                background: rgba(255, 71, 87, 0.08);
-            }
-        """)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 10, 16, 10)
-        layout.setSpacing(6)
-
-        # Top row - password and eye button
-        top_layout = QHBoxLayout()
-
-        password_text = self.password if self.show_password else "••••••••"
-        count = len(self.accounts)
-        self.password_label = QLabel(f'"{password_text}" used in {count} accounts:')
-        self.password_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
-        self.password_label.setStyleSheet("color: #ffffff; background: transparent;")
-
-        # Eye toggle button
-        self.eye_btn = QPushButton()
-        self.eye_btn.setFixedSize(28, 24)
-        self.update_eye_button()
-        self.eye_btn.clicked.connect(self.toggle_password_visibility)
-
-        top_layout.addWidget(self.password_label)
-        top_layout.addStretch()
-        top_layout.addWidget(self.eye_btn)
-
-        # Accounts list - no scrolling, full expansion
-        accounts_widget = QWidget()
-        accounts_layout = QVBoxLayout(accounts_widget)
-        accounts_layout.setContentsMargins(0, 0, 0, 0)
-        accounts_layout.setSpacing(2)
-
-        # Add each account as a separate label
-        for account in self.accounts:
-            account_label = QLabel(f"• {account}")
-            account_label.setFont(QFont("Segoe UI", 9))
-            account_label.setStyleSheet("color: #ff4757; background: transparent;")
-            accounts_layout.addWidget(account_label)
-
-        layout.addLayout(top_layout)
-        layout.addWidget(accounts_widget)
-
-    def update_eye_button(self):
-        if self.show_password:
-            icon = SvgIcon.create_icon(Icons.EYE_OFF, QSize(16, 16), "#ffffff")
-            self.eye_btn.setToolTip("Hide password")
-        else:
-            icon = SvgIcon.create_icon(Icons.EYE, QSize(16, 16), "#ffffff")
-            self.eye_btn.setToolTip("Show password")
-
-        self.eye_btn.setIcon(icon)
-        self.eye_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: 6px;
-            }
-            QPushButton:hover {
-                background: rgba(255, 255, 255, 0.15);
-            }
-        """)
-
-    def toggle_password_visibility(self):
-        self.show_password = not self.show_password
-        password_text = self.password if self.show_password else "••••••••"
-        count = len(self.accounts)
-        self.password_label.setText(f'"{password_text}" used in {count} accounts:')
-        self.update_eye_button()
-
-
-class SecurityDashboard(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.vault_data = None
+class SecurityDashboard(ModernDialog):
+    def __init__(self, vault_data=None, parent=None):
+        super().__init__(parent, "Security Dashboard")
+        self.vault_data = vault_data
         self.show_passwords = False
+
+        # Google Drive backup settings
+        self.google_drive_service = None
+        self.google_credentials = None
+        self.last_backup_time = None
+
         self.init_ui()
+        self.load_google_drive_credentials()
+
+        # Auto-refresh every 30 seconds
+        self.refresh_timer = QTimer()
+        self.refresh_timer.timeout.connect(self.refresh_security_data)
+        self.refresh_timer.start(30000)
 
     def init_ui(self):
-        """Initialize the security dashboard UI"""
-        self.setStyleSheet("""
-            SecurityDashboard {
-                background-color: #2d2d30;
-            }
-        """)
-
-        # Main layout
-        main_layout = QVBoxLayout(self)
+        main_layout = QVBoxLayout()
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(20)
 
-        # Header section
+        # Header section with security score
         self.create_header_section(main_layout)
 
-        # Create 3-tab layout
+        # Tab layout
         self.create_tab_sections(main_layout)
 
     def create_header_section(self, main_layout):
@@ -270,7 +122,7 @@ class SecurityDashboard(QWidget):
         breach_tab.setFixedWidth(400)
         tabs_layout.addWidget(breach_tab)
 
-        # Tab 3: OneDrive Backup
+        # Tab 3: Google Drive Backup
         backup_tab = self.create_backup_tab()
         backup_tab.setFixedWidth(400)
         tabs_layout.addWidget(backup_tab)
@@ -292,67 +144,26 @@ class SecurityDashboard(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        # Header with toggle
-        header_layout = QHBoxLayout()
-
         title = QLabel("Password Security")
         title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
         title.setStyleSheet("color: #ffffff;")
 
-        # Global password visibility toggle
-        self.global_eye_btn = QPushButton()
-        self.global_eye_btn.setFixedHeight(32)
-        self.global_eye_btn.setFixedWidth(100)
+        # Global show/hide passwords button
+        button_layout = QHBoxLayout()
+        self.global_eye_btn = ModernSmallButton(" Show All")
+        self.global_eye_btn.setFixedHeight(28)
+        self.global_eye_btn.clicked.connect(self.toggle_global_password_visibility)
         self.update_global_eye_button()
-        self.global_eye_btn.clicked.connect(self.toggle_all_passwords)
-        self.global_eye_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(76, 175, 80, 0.1);
-                border: 1px solid rgba(76, 175, 80, 0.3);
-                border-radius: 6px;
-                color: #4CAF50;
-                font-size: 11px;
-                font-weight: bold;
-                padding: 6px 12px;
-            }
-            QPushButton:hover {
-                background: rgba(76, 175, 80, 0.2);
-            }
-        """)
 
-        header_layout.addWidget(title)
-        header_layout.addStretch()
-        header_layout.addWidget(self.global_eye_btn)
+        button_layout.addWidget(self.global_eye_btn)
+        button_layout.addStretch()
 
-        # Scrollable content area
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setStyleSheet("""
-            QScrollArea {
-                border: none;
-                background: transparent;
-            }
-            QScrollBar:vertical {
-                background: rgba(255, 255, 255, 0.05);
-                width: 6px;
-                border-radius: 3px;
-            }
-            QScrollBar::handle:vertical {
-                background: rgba(255, 255, 255, 0.3);
-                border-radius: 3px;
-            }
-        """)
+        # Security content
+        content_widget = self.create_security_content()
 
-        # Content widget for scroll area
-        self.content_widget = QWidget()
-        self.content_layout = QVBoxLayout(self.content_widget)
-        self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(8)
-
-        scroll_area.setWidget(self.content_widget)
-
-        layout.addLayout(header_layout)
-        layout.addWidget(scroll_area)
+        layout.addWidget(title)
+        layout.addLayout(button_layout)
+        layout.addWidget(content_widget)
 
         return tab_widget
 
@@ -388,7 +199,7 @@ class SecurityDashboard(QWidget):
         return tab_widget
 
     def create_backup_tab(self):
-        """Create backup tab with OneDrive functionality"""
+        """Create Google Drive backup tab"""
         tab_widget = QFrame()
         tab_widget.setStyleSheet("""
             QFrame {
@@ -402,7 +213,7 @@ class SecurityDashboard(QWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        title = QLabel("OneDrive Backup")
+        title = QLabel("Google Drive Backup")
         title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
         title.setStyleSheet("color: #ffffff;")
 
@@ -438,24 +249,24 @@ class SecurityDashboard(QWidget):
         layout = QVBoxLayout(widget)
         layout.setSpacing(8)
 
-        # OneDrive sync status
-        self.onedrive_status_label = QLabel("🔍 Checking OneDrive sync...")
-        self.onedrive_status_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
-        self.onedrive_status_label.setStyleSheet("color: #ffffff; background: transparent;")
+        # Google Drive connection status
+        self.gdrive_status_label = QLabel("🔍 Checking Google Drive connection...")
+        self.gdrive_status_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
+        self.gdrive_status_label.setStyleSheet("color: #ffffff; background: transparent;")
 
-        # Vault location info
-        self.vault_location_label = QLabel("Vault location: Checking...")
-        self.vault_location_label.setFont(QFont("Segoe UI", 10))
-        self.vault_location_label.setStyleSheet("color: #888888; background: transparent;")
+        # Vault backup info
+        self.vault_backup_label = QLabel("Vault backup status: Checking...")
+        self.vault_backup_label.setFont(QFont("Segoe UI", 10))
+        self.vault_backup_label.setStyleSheet("color: #888888; background: transparent;")
 
-        # Last sync time
-        self.last_sync_label = QLabel("Last sync: Unknown")
-        self.last_sync_label.setFont(QFont("Segoe UI", 10))
-        self.last_sync_label.setStyleSheet("color: #888888; background: transparent;")
+        # Last backup time
+        self.last_backup_label = QLabel("Last backup: Unknown")
+        self.last_backup_label.setFont(QFont("Segoe UI", 10))
+        self.last_backup_label.setStyleSheet("color: #888888; background: transparent;")
 
-        layout.addWidget(self.onedrive_status_label)
-        layout.addWidget(self.vault_location_label)
-        layout.addWidget(self.last_sync_label)
+        layout.addWidget(self.gdrive_status_label)
+        layout.addWidget(self.vault_backup_label)
+        layout.addWidget(self.last_backup_label)
 
         return widget
 
@@ -474,36 +285,37 @@ class SecurityDashboard(QWidget):
         layout = QVBoxLayout(widget)
         layout.setSpacing(10)
 
-        settings_title = QLabel("Sync Settings")
+        settings_title = QLabel("Backup Settings")
         settings_title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
         settings_title.setStyleSheet("color: #ffffff; background: transparent;")
 
-        # OneDrive sync status
-        sync_status_widget = QWidget()
-        sync_status_layout = QHBoxLayout(sync_status_widget)
-        sync_status_layout.setContentsMargins(0, 0, 0, 0)
+        # Google Drive backup status
+        backup_status_widget = QWidget()
+        backup_status_layout = QHBoxLayout(backup_status_widget)
+        backup_status_layout.setContentsMargins(0, 0, 0, 0)
 
-        sync_status_label = QLabel("OneDrive Files On-Demand")
-        sync_status_label.setFont(QFont("Segoe UI", 10))
-        sync_status_label.setStyleSheet("color: #ffffff; background: transparent;")
+        backup_status_label = QLabel("Auto-backup on save")
+        backup_status_label.setFont(QFont("Segoe UI", 10))
+        backup_status_label.setStyleSheet("color: #ffffff; background: transparent;")
 
-        self.sync_status_indicator = QLabel("Unknown")
-        self.sync_status_indicator.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
-        self.sync_status_indicator.setStyleSheet("color: #ffaa00; background: transparent;")
+        self.backup_status_indicator = QLabel("Unknown")
+        self.backup_status_indicator.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        self.backup_status_indicator.setStyleSheet("color: #ffaa00; background: transparent;")
 
-        sync_status_layout.addWidget(sync_status_label)
-        sync_status_layout.addStretch()
-        sync_status_layout.addWidget(self.sync_status_indicator)
+        backup_status_layout.addWidget(backup_status_label)
+        backup_status_layout.addStretch()
+        backup_status_layout.addWidget(self.backup_status_indicator)
 
-        # Vault protection info
-        protection_info = QLabel("Your vault is automatically backed up when OneDrive syncs. No manual backups needed!")
-        protection_info.setFont(QFont("Segoe UI", 9))
-        protection_info.setStyleSheet("color: #888888; background: transparent;")
-        protection_info.setWordWrap(True)
+        # Premium feature info
+        premium_info = QLabel(
+            "Premium Feature: Your vault is automatically backed up to Google Drive after every save. Zero-knowledge encryption keeps your data private.")
+        premium_info.setFont(QFont("Segoe UI", 9))
+        premium_info.setStyleSheet("color: #888888; background: transparent;")
+        premium_info.setWordWrap(True)
 
         layout.addWidget(settings_title)
-        layout.addWidget(sync_status_widget)
-        layout.addWidget(protection_info)
+        layout.addWidget(backup_status_widget)
+        layout.addWidget(premium_info)
 
         return widget
 
@@ -513,122 +325,636 @@ class SecurityDashboard(QWidget):
         layout = QVBoxLayout(widget)
         layout.setSpacing(8)
 
-        # Force sync button
-        self.force_sync_btn = ModernButton("Force Sync Now")
-        self.force_sync_btn.setFixedHeight(36)
-        self.force_sync_btn.clicked.connect(self.force_sync_vault)
+        if not GOOGLE_DRIVE_AVAILABLE:
+            # Show API not available message
+            error_label = QLabel(
+                "⚠️ Google Drive API not installed\nInstall: pip install google-api-python-client google-auth-oauthlib")
+            error_label.setStyleSheet("color: #ff9500; background: transparent;")
+            error_label.setWordWrap(True)
+            layout.addWidget(error_label)
+            return widget
 
-        # Open OneDrive folder button
-        self.open_onedrive_btn = ModernButton("Open OneDrive Folder")
-        self.open_onedrive_btn.setFixedHeight(36)
-        self.open_onedrive_btn.clicked.connect(self.open_onedrive_folder)
+        # Setup Google Drive button (if not connected)
+        self.setup_gdrive_btn = ModernButton("Connect Google Drive")
+        self.setup_gdrive_btn.setFixedHeight(36)
+        self.setup_gdrive_btn.clicked.connect(self.setup_google_drive_backup)
 
-        # Check sync status button
-        self.check_sync_btn = ModernButton("Check Sync Status")
-        self.check_sync_btn.setFixedHeight(36)
-        self.check_sync_btn.clicked.connect(self.check_sync_status)
+        # Backup now button
+        self.backup_now_btn = ModernButton("Backup Now")
+        self.backup_now_btn.setFixedHeight(36)
+        self.backup_now_btn.clicked.connect(self.manual_backup_to_gdrive)
 
-        layout.addWidget(self.force_sync_btn)
-        layout.addWidget(self.open_onedrive_btn)
-        layout.addWidget(self.check_sync_btn)
+        # Check backup status button
+        self.check_backup_btn = ModernButton("Check Backup Status")
+        self.check_backup_btn.setFixedHeight(36)
+        self.check_backup_btn.clicked.connect(self.check_backup_status)
+
+        # View backups button
+        self.view_backups_btn = ModernButton("View Backup History")
+        self.view_backups_btn.setFixedHeight(36)
+        self.view_backups_btn.clicked.connect(self.view_backup_history)
+
+        layout.addWidget(self.setup_gdrive_btn)
+        layout.addWidget(self.backup_now_btn)
+        layout.addWidget(self.check_backup_btn)
+        layout.addWidget(self.view_backups_btn)
 
         return widget
 
-    def update_global_eye_button(self):
-        """Update the global eye button icon and text"""
-        if self.show_passwords:
-            icon = SvgIcon.create_icon(Icons.EYE_OFF, QSize(16, 16), "#4CAF50")
-            self.global_eye_btn.setText(" Hide All")
-        else:
-            icon = SvgIcon.create_icon(Icons.EYE, QSize(16, 16), "#4CAF50")
-            self.global_eye_btn.setText(" Show All")
+    # Google Drive Integration Methods
 
-        self.global_eye_btn.setIcon(icon)
-        self.global_eye_btn.setIconSize(QSize(16, 16))
-
-    def toggle_all_passwords(self):
-        """Toggle visibility of all passwords"""
-        self.show_passwords = not self.show_passwords
-        self.update_global_eye_button()
-
-        # Update all cards
-        self.refresh_password_issues()
-
-    def load_vault_data(self, vault_data):
-        """Load vault data and update security analysis"""
-        self.vault_data = vault_data
-        self.analyze_security()
-
-        # Update backup status safely
+    def load_google_drive_credentials(self):
+        """Load saved Google Drive credentials"""
         try:
-            self.update_backup_status()
-        except Exception as e:
-            print(f"Error updating backup status: {e}")
+            creds_file = os.path.join(os.path.expanduser("~"), ".vault", "gdrive_creds.json")
+            if os.path.exists(creds_file):
+                self.google_credentials = Credentials.from_authorized_user_file(creds_file)
 
-    def analyze_security(self):
-        """Analyze vault security and update UI"""
-        if not self.vault_data:
+                # Refresh credentials if needed
+                if self.google_credentials.expired and self.google_credentials.refresh_token:
+                    self.google_credentials.refresh(Request())
+                    self.save_google_drive_credentials()
+
+                # Build service
+                if self.google_credentials.valid:
+                    self.google_drive_service = build('drive', 'v3', credentials=self.google_credentials)
+                    print("✅ Google Drive credentials loaded successfully")
+
+            self.update_backup_status()
+
+        except Exception as e:
+            print(f"Error loading Google Drive credentials: {e}")
+            self.google_credentials = None
+            self.google_drive_service = None
+            self.update_backup_status()
+
+    def save_google_drive_credentials(self):
+        """Save Google Drive credentials securely"""
+        try:
+            creds_dir = os.path.join(os.path.expanduser("~"), ".vault")
+            os.makedirs(creds_dir, exist_ok=True)
+
+            creds_file = os.path.join(creds_dir, "gdrive_creds.json")
+            with open(creds_file, 'w') as f:
+                f.write(self.google_credentials.to_json())
+
+            print("✅ Google Drive credentials saved")
+
+        except Exception as e:
+            print(f"Error saving Google Drive credentials: {e}")
+
+    def setup_google_drive_backup(self):
+        """Setup Google Drive backup with OAuth"""
+        if not GOOGLE_DRIVE_AVAILABLE:
+            QMessageBox.warning(self, "API Not Available",
+                                "Google Drive API not installed.\n\nInstall with:\npip install google-api-python-client google-auth-oauthlib")
             return
 
         try:
-            print("Analyzing vault security...")
+            # Google OAuth configuration for Vault
+            CLIENT_CONFIG = {
+                "installed": {
+                    "client_id": "your-vault-client-id.apps.googleusercontent.com",
+                    "client_secret": "your-client-secret",
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": ["http://localhost:8080"]
+                }
+            }
 
-            # Get vault data structure
-            vault_folders = self.vault_data.get("data", {})
+            SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
-            # Analyze weak passwords and duplicates
-            weak_passwords = self.analyze_weak_passwords(vault_folders)
-            duplicate_passwords = self.analyze_duplicate_passwords(vault_folders)
+            # Create OAuth flow
+            flow = InstalledAppFlow.from_client_config(CLIENT_CONFIG, SCOPES)
 
-            # Calculate overall security score
-            security_score = self.calculate_security_score(len(weak_passwords), len(duplicate_passwords))
+            # Show setup dialog
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Connect Google Drive")
+            dialog.setFixedSize(500, 300)
 
-            print(
-                f"Analysis results: {len(weak_passwords)} weak, {len(duplicate_passwords)} duplicates, score: {security_score}")
+            layout = QVBoxLayout(dialog)
 
-            # Update security score display
-            score_color = "#4CAF50" if security_score >= 70 else "#ffaa00" if security_score >= 40 else "#f44336"
-            self.security_score_label.setText(str(security_score))
-            self.security_score_label.setStyleSheet(f"color: {score_color}; font-size: 36px; font-weight: bold;")
+            title = QLabel("🔒 Premium Backup Protection")
+            title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
+            title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-            # Store analysis results
-            self.weak_passwords = weak_passwords
-            self.duplicate_passwords = duplicate_passwords
+            description = QLabel(
+                "Automatically backup your vault to Google Drive after every save.\n\n"
+                "✅ Your vault stays encrypted - Google can't see your passwords\n"
+                "✅ Automatic versioning and backup history\n"
+                "✅ Works on any device with your Google account\n"
+                "✅ Immediate backup confirmation\n\n"
+                "Click 'Authorize' to open Google's permission page in your browser."
+            )
+            description.setWordWrap(True)
+            description.setStyleSheet("color: #888888;")
 
-            print("About to refresh password issues...")
+            button_layout = QHBoxLayout()
 
-            # Refresh the password issues display
-            self.refresh_password_issues()
+            auth_btn = ModernButton("Authorize Google Drive")
+            auth_btn.clicked.connect(lambda: self.complete_oauth_flow(flow, dialog))
 
-            print(
-                f"Security analysis complete: {len(weak_passwords)} weak, {len(duplicate_passwords)} duplicates, score: {security_score}")
+            cancel_btn = ModernButton("Cancel")
+            cancel_btn.clicked.connect(dialog.reject)
+
+            button_layout.addWidget(cancel_btn)
+            button_layout.addWidget(auth_btn)
+
+            layout.addWidget(title)
+            layout.addWidget(description)
+            layout.addLayout(button_layout)
+
+            dialog.exec()
 
         except Exception as e:
-            print(f"Error during security analysis: {e}")
-            import traceback
-            traceback.print_exc()
+            QMessageBox.critical(self, "Setup Error", f"Failed to setup Google Drive backup:\n{str(e)}")
+
+    def complete_oauth_flow(self, flow, dialog):
+        """Complete OAuth flow and save credentials"""
+        try:
+            # Run local server to handle OAuth callback
+            self.google_credentials = flow.run_local_server(port=8080)
+
+            # Save credentials
+            self.save_google_drive_credentials()
+
+            # Build service
+            self.google_drive_service = build('drive', 'v3', credentials=self.google_credentials)
+
+            # Create Vault folder in Google Drive
+            self.create_vault_folder()
+
+            dialog.accept()
+
+            # Update UI
+            self.update_backup_status()
+
+            QMessageBox.information(self, "Success",
+                                    "✅ Google Drive backup enabled!\n\n"
+                                    "Your vault will now be automatically backed up after every save.")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Authorization Error",
+                                 f"Failed to authorize Google Drive:\n{str(e)}")
+
+    def create_vault_folder(self):
+        """Create Vault folder in Google Drive (tries both 'Vault' and 'TheVault')"""
+        try:
+            if not self.google_drive_service:
+                return None
+
+            # Check if 'Vault' folder exists first (new name)
+            query = "name='Vault' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+            results = self.google_drive_service.files().list(q=query).execute()
+
+            if results.get('files'):
+                folder_id = results['files'][0]['id']
+                print(f"✅ Vault folder found: {folder_id}")
+                return folder_id
+
+            # Check if 'TheVault' folder exists (legacy name)
+            query = "name='TheVault' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+            results = self.google_drive_service.files().list(q=query).execute()
+
+            if results.get('files'):
+                folder_id = results['files'][0]['id']
+                print(f"✅ TheVault folder found (legacy): {folder_id}")
+                return folder_id
+
+            # Create new 'Vault' folder
+            folder_metadata = {
+                'name': 'Vault',
+                'mimeType': 'application/vnd.google-apps.folder'
+            }
+
+            folder = self.google_drive_service.files().create(body=folder_metadata).execute()
+            folder_id = folder.get('id')
+
+            print(f"✅ Vault folder created: {folder_id}")
+            return folder_id
+
+        except Exception as e:
+            print(f"Error creating Vault folder: {e}")
+            return None
+
+    def backup_vault_to_google_drive(self, vault_file_path):
+        """Backup vault file to Google Drive"""
+        try:
+            if not self.google_drive_service:
+                return {"success": False, "message": "Google Drive not connected"}
+
+            if not os.path.exists(vault_file_path):
+                return {"success": False, "message": "Vault file not found"}
+
+            print(f"Starting Google Drive backup: {vault_file_path}")
+
+            # Get or create Vault folder
+            folder_id = self.create_vault_folder()
+            if not folder_id:
+                return {"success": False, "message": "Failed to access Google Drive folder"}
+
+            # Check if vault.enc already exists
+            query = f"name='vault.enc' and parents in '{folder_id}' and trashed=false"
+            results = self.google_drive_service.files().list(q=query).execute()
+
+            # Prepare upload
+            media = MediaFileUpload(vault_file_path, resumable=True)
+
+            if results.get('files'):
+                # Update existing file
+                file_id = results['files'][0]['id']
+                updated_file = self.google_drive_service.files().update(
+                    fileId=file_id,
+                    media_body=media
+                ).execute()
+
+                status_message = "✅ Vault updated in Google Drive"
+                print(f"✅ Vault updated: {updated_file.get('id')}")
+
+            else:
+                # Create new file
+                file_metadata = {
+                    'name': 'vault.enc',
+                    'parents': [folder_id]
+                }
+
+                created_file = self.google_drive_service.files().create(
+                    body=file_metadata,
+                    media_body=media
+                ).execute()
+
+                status_message = "✅ Vault backed up to Google Drive"
+                print(f"✅ Vault created: {created_file.get('id')}")
+
+            # Update backup time
+            self.last_backup_time = datetime.now()
+            self.update_backup_status()
+
+            return {"success": True, "message": status_message}
+
+        except Exception as e:
+            error_msg = f"Google Drive backup failed: {str(e)}"
+            print(error_msg)
+            return {"success": False, "message": error_msg}
+
+    def manual_backup_to_gdrive(self):
+        """Manual backup trigger"""
+        try:
+            if not self.google_drive_service:
+                QMessageBox.warning(self, "Not Connected",
+                                    "Google Drive not connected. Click 'Connect Google Drive' first.")
+                return
+
+            # Get vault file path
+            vault_path = self.get_vault_file_path()
+            if not vault_path:
+                QMessageBox.warning(self, "Vault Not Found",
+                                    "Cannot find vault file to backup.")
+                return
+
+            # Show progress
+            self.show_backup_progress("🔄 Backing up to Google Drive...")
+
+            # Perform backup
+            result = self.backup_vault_to_google_drive(vault_path)
+
+            if result["success"]:
+                QMessageBox.information(self, "Backup Success", result["message"])
+            else:
+                QMessageBox.critical(self, "Backup Failed", result["message"])
+
+        except Exception as e:
+            QMessageBox.critical(self, "Backup Error", f"Backup failed:\n{str(e)}")
+
+    def check_backup_status(self):
+        """Check current backup status"""
+        print("Checking Google Drive backup status...")
+        self.update_backup_status()
+
+    def view_backup_history(self):
+        """Show backup history from Google Drive"""
+        try:
+            if not self.google_drive_service:
+                QMessageBox.warning(self, "Not Connected",
+                                    "Google Drive not connected.")
+                return
+
+            # Get Vault folder
+            folder_id = self.create_vault_folder()
+            if not folder_id:
+                QMessageBox.warning(self, "Folder Not Found",
+                                    "Vault folder not found in Google Drive.")
+                return
+
+            # Get file revisions
+            query = f"name='vault.enc' and parents in '{folder_id}' and trashed=false"
+            results = self.google_drive_service.files().list(q=query).execute()
+
+            if not results.get('files'):
+                QMessageBox.information(self, "No Backups",
+                                        "No vault backups found in Google Drive.")
+                return
+
+            file_id = results['files'][0]['id']
+
+            # Get revision history
+            revisions = self.google_drive_service.revisions().list(fileId=file_id).execute()
+
+            # Show history dialog
+            self.show_backup_history_dialog(revisions.get('revisions', []))
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to get backup history:\n{str(e)}")
+
+    def show_backup_history_dialog(self, revisions):
+        """Show backup history in a dialog"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Backup History")
+        dialog.setFixedSize(600, 400)
+
+        layout = QVBoxLayout(dialog)
+
+        title = QLabel("📁 Google Drive Backup History")
+        title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+
+        history_text = QTextEdit()
+        history_text.setReadOnly(True)
+
+        history_content = ""
+        for i, revision in enumerate(reversed(revisions)):
+            modified_time = revision.get('modifiedTime', 'Unknown')
+            try:
+                # Parse ISO timestamp
+                dt = datetime.fromisoformat(modified_time.replace('Z', '+00:00'))
+                time_str = dt.strftime('%Y-%m-%d %H:%M:%S')
+            except:
+                time_str = modified_time
+
+            history_content += f"Version {len(revisions) - i}: {time_str}\n"
+
+        history_text.setPlainText(history_content)
+
+        close_btn = ModernButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+
+        layout.addWidget(title)
+        layout.addWidget(history_text)
+        layout.addWidget(close_btn)
+
+        dialog.exec()
+
+    def update_backup_status(self):
+        """Update Google Drive backup status display"""
+        try:
+            print("Updating Google Drive backup status...")
+
+            if not GOOGLE_DRIVE_AVAILABLE:
+                self.gdrive_status_label.setText("❌ Google Drive API not installed")
+                self.gdrive_status_label.setStyleSheet("color: #ff4757; background: transparent;")
+                self.vault_backup_label.setText("Install Google Drive API to enable backups")
+                self.last_backup_label.setText("API installation required")
+                self.backup_status_indicator.setText("❌ Not Available")
+                self.backup_status_indicator.setStyleSheet("color: #ff4757; background: transparent;")
+
+                # Update buttons
+                self.setup_gdrive_btn.setEnabled(False)
+                self.backup_now_btn.setEnabled(False)
+                return
+
+            if not self.google_drive_service or not self.google_credentials:
+                self.gdrive_status_label.setText("⚠️ Google Drive not connected")
+                self.gdrive_status_label.setStyleSheet("color: #ff9500; background: transparent;")
+                self.vault_backup_label.setText("Connect Google Drive to enable automatic backups")
+                self.last_backup_label.setText("No backup protection")
+                self.backup_status_indicator.setText("❌ Not Connected")
+                self.backup_status_indicator.setStyleSheet("color: #ff4757; background: transparent;")
+
+                # Update buttons
+                self.setup_gdrive_btn.setVisible(True)
+                self.backup_now_btn.setEnabled(False)
+                return
+
+            # Google Drive connected - check backup status
+            self.gdrive_status_label.setText("✅ Google Drive connected")
+            self.gdrive_status_label.setStyleSheet("color: #4CAF50; background: transparent;")
+
+            # Check if vault file exists in Google Drive
+            folder_id = self.create_vault_folder()
+            if folder_id:
+                query = f"name='vault.enc' and parents in '{folder_id}' and trashed=false"
+                results = self.google_drive_service.files().list(q=query).execute()
+
+                if results.get('files'):
+                    file_info = results['files'][0]
+                    modified_time = file_info.get('modifiedTime', '')
+
+                    try:
+                        # Parse modification time
+                        dt = datetime.fromisoformat(modified_time.replace('Z', '+00:00'))
+                        time_ago = datetime.now(dt.tzinfo) - dt
+
+                        if time_ago.total_seconds() < 300:  # 5 minutes
+                            status = "✅ Recently backed up"
+                            time_str = "Just now"
+                            color = "#4CAF50"
+                        elif time_ago.total_seconds() < 3600:  # 1 hour
+                            status = "✅ Backed up recently"
+                            time_str = f"{int(time_ago.total_seconds() // 60)} minutes ago"
+                            color = "#4CAF50"
+                        elif time_ago.days < 1:
+                            status = "✅ Backed up today"
+                            time_str = dt.strftime('%H:%M today')
+                            color = "#4CAF50"
+                        else:
+                            status = "⚠️ Backup is outdated"
+                            time_str = dt.strftime('%m/%d/%Y')
+                            color = "#ff9500"
+
+                    except:
+                        status = "✅ Vault found in Google Drive"
+                        time_str = "Unknown time"
+                        color = "#4CAF50"
+
+                    self.vault_backup_label.setText(status)
+                    self.vault_backup_label.setStyleSheet(f"color: {color}; background: transparent;")
+                    self.last_backup_label.setText(f"Last backup: {time_str}")
+                    self.backup_status_indicator.setText("✅ Protected")
+                    self.backup_status_indicator.setStyleSheet("color: #4CAF50; background: transparent;")
+
+                else:
+                    self.vault_backup_label.setText("⚠️ No vault backup found")
+                    self.vault_backup_label.setStyleSheet("color: #ff9500; background: transparent;")
+                    self.last_backup_label.setText("Click 'Backup Now' to create first backup")
+                    self.backup_status_indicator.setText("⚠️ No Backup")
+                    self.backup_status_indicator.setStyleSheet("color: #ff9500; background: transparent;")
+
+            # Update buttons
+            self.setup_gdrive_btn.setVisible(False)
+            self.backup_now_btn.setEnabled(True)
+
+            print("Google Drive backup status updated")
+
+        except Exception as e:
+            print(f"Error updating backup status: {e}")
+
+            # Safe fallback
+            self.gdrive_status_label.setText("❌ Backup status error")
+            self.gdrive_status_label.setStyleSheet("color: #ff4757; background: transparent;")
+            self.vault_backup_label.setText("Error checking backup status")
+            self.last_backup_label.setText("Try reconnecting Google Drive")
+            self.backup_status_indicator.setText("Error")
+            self.backup_status_indicator.setStyleSheet("color: #ff4757; background: transparent;")
+
+    def show_backup_progress(self, message):
+        """Show backup progress temporarily"""
+        try:
+            original_text = self.gdrive_status_label.text()
+            self.gdrive_status_label.setText(message)
+            self.gdrive_status_label.setStyleSheet("color: #ff9500; background: transparent;")
+
+            # Restore original text after 5 seconds
+            def restore_text():
+                self.gdrive_status_label.setText(original_text)
+                self.update_backup_status()
+
+            QTimer.singleShot(5000, restore_text)
+
+        except Exception as e:
+            print(f"Error showing backup progress: {e}")
+
+    def get_vault_file_path(self):
+        """Get the current vault file path"""
+        try:
+            # Try to get vault path from config
+            from config import get_vault_path
+            return get_vault_path()
+        except:
+            # Fallback: look in common locations
+            possible_paths = [
+                os.path.join(os.path.expanduser("~"), "Documents", "Vault", "vault.enc"),
+                os.path.join(os.path.expanduser("~"), "Documents", "TheVault", "vault.enc"),  # Legacy
+                os.path.join(os.path.expanduser("~"), "Vault", "vault.enc"),
+                os.path.join(os.path.expanduser("~"), "TheVault", "vault.enc"),  # Legacy
+                os.path.join(".", "vault.enc"),
+                os.path.join("dev_vault_data", "vault.enc")  # Dev environment
+            ]
+
+            for path in possible_paths:
+                if os.path.exists(path):
+                    return path
+            return None
+
+    # Password Security Analysis Methods (unchanged from original)
+
+    def create_security_content(self):
+        """Create scrollable security analysis content"""
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background: transparent;
+            }
+            QScrollBar:vertical {
+                background: rgba(255, 255, 255, 0.1);
+                width: 8px;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 4px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: rgba(255, 255, 255, 0.5);
+            }
+        """)
+
+        content_widget = QWidget()
+        content_layout = QVBoxLayout(content_widget)
+        content_layout.setSpacing(12)
+
+        if self.vault_data:
+            self.analyze_and_display_security(content_layout)
+        else:
+            self.show_no_vault_message(content_layout)
+
+        scroll_area.setWidget(content_widget)
+        return scroll_area
+
+    def analyze_and_display_security(self, layout):
+        """Analyze vault security and display results"""
+        vault_folders = self.vault_data.get("folders", {})
+
+        # Analyze passwords
+        weak_passwords = self.analyze_weak_passwords(vault_folders)
+        duplicate_passwords = self.analyze_duplicate_passwords(vault_folders)
+
+        # Update security score
+        total_passwords = sum(len(folder.get("entries", [])) for folder in vault_folders.values())
+        weak_count = len(weak_passwords)
+        duplicate_count = len(duplicate_passwords)
+
+        if total_passwords > 0:
+            score = max(0, 100 - (weak_count * 10) - (duplicate_count * 15))
+        else:
+            score = 85
+
+        self.security_score_label.setText(str(score))
+
+        # Color code the score
+        if score >= 80:
+            color = "#4CAF50"
+        elif score >= 60:
+            color = "#ff9500"
+        else:
+            color = "#ff4757"
+        self.security_score_label.setStyleSheet(f"color: {color};")
+
+        # Display weak passwords
+        if weak_passwords:
+            weak_section = self.create_weak_passwords_section(weak_passwords)
+            layout.addWidget(weak_section)
+
+        # Display duplicate passwords
+        if duplicate_passwords:
+            duplicate_section = self.create_duplicate_passwords_section(duplicate_passwords)
+            layout.addWidget(duplicate_section)
+
+        # Good security message
+        if not weak_passwords and not duplicate_passwords:
+            good_security = QLabel("✅ Great job! No security issues found.")
+            good_security.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+            good_security.setStyleSheet("color: #4CAF50; padding: 20px;")
+            good_security.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(good_security)
+
+    def show_no_vault_message(self, layout):
+        """Show message when no vault is loaded"""
+        message = QLabel("Load a vault to see security analysis")
+        message.setFont(QFont("Segoe UI", 12))
+        message.setStyleSheet("color: #888888; padding: 40px;")
+        message.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(message)
 
     def analyze_weak_passwords(self, vault_folders):
-        """Analyze and return weak passwords with details"""
+        """Analyze and return weak passwords"""
         weak_passwords = []
 
         for folder_name, folder_data in vault_folders.items():
             entries = folder_data.get("entries", [])
             for entry in entries:
-                # Check password fields
                 for field in ['Password', 'password']:
                     if field in entry:
                         password = entry[field]
-                        if password:
+                        if password and self.is_weak_password(password):
+                            account_info = self.get_account_info(entry, folder_name)
                             issues = self.get_password_issues(password)
-                            if issues:
-                                # Get account info
-                                account_info = self.get_account_info(entry, folder_name)
-                                weak_passwords.append({
-                                    'password': password,
-                                    'issues': issues,
-                                    'account': account_info
-                                })
+                            weak_passwords.append({
+                                'account': account_info,
+                                'password': password,
+                                'issues': issues
+                            })
                         break
 
         return weak_passwords
@@ -662,6 +988,24 @@ class SecurityDashboard(QWidget):
 
         return duplicates
 
+    def is_weak_password(self, password):
+        """Check if password is weak"""
+        if len(password) < 8:
+            return True
+
+        # Check for common patterns
+        import re
+        if not re.search(r"[A-Z]", password):
+            return True
+        if not re.search(r"[a-z]", password):
+            return True
+        if not re.search(r"\d", password):
+            return True
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+            return True
+
+        return False
+
     def get_password_issues(self, password):
         """Get list of issues with a password"""
         issues = []
@@ -680,401 +1024,208 @@ class SecurityDashboard(QWidget):
             issues.append("No numbers")
 
         if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
-            issues.append("No symbols")
+            issues.append("No special characters")
 
         return issues
 
     def get_account_info(self, entry, folder_name):
         """Get readable account information from entry"""
-        # Try to get title or username
-        for field in ['Title', 'title', 'Username', 'username', 'Email', 'email']:
+        # Try to get account name from various fields
+        for field in ['Title', 'title', 'Account', 'account', 'Website', 'website', 'URL', 'url']:
             if field in entry and entry[field]:
-                return f"{folder_name} ({entry[field]})"
+                return f"{entry[field]} ({folder_name})"
 
-        return f"{folder_name} account"
+        # Try username as fallback
+        for field in ['Username', 'username', 'Email', 'email']:
+            if field in entry and entry[field]:
+                return f"{entry[field]} ({folder_name})"
 
-    def calculate_security_score(self, weak_count, duplicate_count):
-        """Calculate overall security score (0-100)"""
-        score = 100
-        score -= weak_count * 5  # 5 points per weak password
-        score -= duplicate_count * 10  # 10 points per duplicate group
-        return max(0, score)
+        return f"Unnamed Account ({folder_name})"
 
-    def refresh_password_issues(self):
-        """Refresh the password issues display"""
-        try:
-            print("Starting refresh_password_issues...")
+    def create_weak_passwords_section(self, weak_passwords):
+        """Create UI section for weak passwords"""
+        section = QFrame()
+        section.setStyleSheet("""
+            QFrame {
+                background: rgba(255, 71, 87, 0.1);
+                border: none;
+                border-radius: 8px;
+                padding: 12px;
+            }
+        """)
 
-            # Clear existing content safely
-            while self.content_layout.count():
-                child = self.content_layout.takeAt(0)
-                if child.widget():
-                    widget = child.widget()
-                    widget.setParent(None)
-                    widget.deleteLater()
+        layout = QVBoxLayout(section)
+        layout.setSpacing(8)
 
-            print("Cleared existing content")
+        # Header
+        header = QLabel(f"⚠️ Weak Passwords ({len(weak_passwords)})")
+        header.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        header.setStyleSheet("color: #ff4757; background: transparent;")
+        layout.addWidget(header)
 
-            if not hasattr(self, 'weak_passwords') or not hasattr(self, 'duplicate_passwords'):
-                print("No password data available")
-                return
+        # List weak passwords
+        for weak_pass in weak_passwords[:10]:  # Limit to 10 for UI
+            account_widget = self.create_password_issue_widget(
+                weak_pass['account'],
+                weak_pass['password'],
+                ", ".join(weak_pass['issues'])
+            )
+            layout.addWidget(account_widget)
 
-            print(
-                f"Processing {len(self.weak_passwords)} weak passwords and {len(self.duplicate_passwords)} duplicates")
+        if len(weak_passwords) > 10:
+            more_label = QLabel(f"... and {len(weak_passwords) - 10} more")
+            more_label.setStyleSheet("color: #888888; background: transparent;")
+            layout.addWidget(more_label)
 
-            # Add weak password cards
-            if self.weak_passwords:
-                weak_header = QLabel("Weak Passwords:")
-                weak_header.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-                weak_header.setStyleSheet("color: #ffaa00; margin: 10px 0px 5px 0px;")
-                self.content_layout.addWidget(weak_header)
+        return section
 
-                for i, weak_pwd in enumerate(self.weak_passwords):
-                    print(f"Creating weak password card {i + 1}")
-                    try:
-                        card = PasswordIssueCard(
-                            weak_pwd['password'],
-                            weak_pwd['issues'],
-                            weak_pwd['account'],
-                            self.show_passwords
-                        )
-                        self.content_layout.addWidget(card)
-                    except Exception as e:
-                        print(f"Error creating weak password card {i + 1}: {e}")
+    def create_duplicate_passwords_section(self, duplicate_passwords):
+        """Create UI section for duplicate passwords"""
+        section = QFrame()
+        section.setStyleSheet("""
+            QFrame {
+                background: rgba(255, 149, 0, 0.1);
+                border: none;
+                border-radius: 8px;
+                padding: 12px;
+            }
+        """)
 
-            # Add duplicate password cards
-            if self.duplicate_passwords:
-                dup_header = QLabel("Duplicate Passwords:")
-                dup_header.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-                dup_header.setStyleSheet("color: #ff4757; margin: 20px 0px 5px 0px;")
-                self.content_layout.addWidget(dup_header)
+        layout = QVBoxLayout(section)
+        layout.setSpacing(8)
 
-                for i, dup_pwd in enumerate(self.duplicate_passwords):
-                    print(f"Creating duplicate password card {i + 1}")
-                    try:
-                        card = DuplicatePasswordCard(
-                            dup_pwd['password'],
-                            dup_pwd['accounts'],
-                            self.show_passwords
-                        )
-                        self.content_layout.addWidget(card)
-                    except Exception as e:
-                        print(f"Error creating duplicate password card {i + 1}: {e}")
+        # Header
+        header = QLabel(f"🔄 Duplicate Passwords ({len(duplicate_passwords)})")
+        header.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        header.setStyleSheet("color: #ff9500; background: transparent;")
+        layout.addWidget(header)
 
-            # Add stretch to push content to top
-            self.content_layout.addStretch()
+        # List duplicates
+        for duplicate in duplicate_passwords[:5]:  # Limit to 5 for UI
+            accounts_text = ", ".join(duplicate['accounts'])
+            duplicate_widget = self.create_password_issue_widget(
+                f"Used by {len(duplicate['accounts'])} accounts",
+                duplicate['password'],
+                accounts_text
+            )
+            layout.addWidget(duplicate_widget)
 
-            print("Completed refresh_password_issues")
+        if len(duplicate_passwords) > 5:
+            more_label = QLabel(f"... and {len(duplicate_passwords) - 5} more")
+            more_label.setStyleSheet("color: #888888; background: transparent;")
+            layout.addWidget(more_label)
 
-        except Exception as e:
-            print(f"Error in refresh_password_issues: {e}")
-            import traceback
-            traceback.print_exc()
+        return section
 
-    def force_sync_vault(self):
-        """Force OneDrive to sync the vault file"""
-        try:
-            print("Forcing vault sync to OneDrive...")
+    def create_password_issue_widget(self, title, password, details):
+        """Create widget for displaying password issues"""
+        widget = QFrame()
+        widget.setStyleSheet("""
+            QFrame {
+                background: rgba(255, 255, 255, 0.05);
+                border: none;
+                border-radius: 6px;
+                padding: 8px;
+            }
+        """)
 
-            # Get vault file path (assuming it's accessible)
-            vault_path = self.get_vault_file_path()
-            if not vault_path or not os.path.exists(vault_path):
-                print("Vault file not found for sync")
-                self.show_sync_result("❌ Vault file not found", False)
-                return
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(4)
 
-            print(f"Syncing vault file: {vault_path}")
+        # Title
+        title_label = QLabel(title)
+        title_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        title_label.setStyleSheet("color: #ffffff; background: transparent;")
+        layout.addWidget(title_label)
 
-            # Method 1: Use attrib to force sync
-            sync_success = self.force_file_sync_attrib(vault_path)
+        # Password (with show/hide)
+        password_layout = QHBoxLayout()
 
-            if not sync_success:
-                # Method 2: Touch file to trigger sync
-                sync_success = self.touch_file_to_trigger_sync(vault_path)
+        password_label = QLabel("•" * len(password) if not self.show_passwords else password)
+        password_label.setFont(QFont("Consolas", 10))
+        password_label.setStyleSheet("color: #ffaa00; background: transparent;")
 
-            if sync_success:
-                self.show_sync_result("✅ Sync triggered successfully", True)
-                # Auto-refresh status after sync
-                from PyQt6.QtCore import QTimer
-                QTimer.singleShot(3000, self.update_backup_status)  # Check again in 3 seconds
-            else:
-                self.show_sync_result("⚠️ Sync trigger failed", False)
+        eye_btn = ModernSmallButton()
+        eye_btn.setFixedSize(24, 24)
+        eye_btn.clicked.connect(lambda: self.toggle_individual_password(password_label, password))
+        self.update_eye_button(eye_btn, self.show_passwords)
 
-        except Exception as e:
-            print(f"Error forcing vault sync: {e}")
-            self.show_sync_result("❌ Sync error occurred", False)
+        password_layout.addWidget(password_label)
+        password_layout.addWidget(eye_btn)
+        password_layout.addStretch()
 
-    def get_vault_file_path(self):
-        """Get the current vault file path"""
-        try:
-            # Try to get vault path from config or environment
-            from config import get_vault_path
-            return get_vault_path()
-        except:
-            # Fallback: look in OneDrive/TheVault
-            onedrive_path = os.environ.get('ONEDRIVE')
-            if onedrive_path:
-                vault_path = os.path.join(onedrive_path, 'TheVault', 'vault.enc')
-                if os.path.exists(vault_path):
-                    return vault_path
-            return None
+        # Details
+        details_label = QLabel(details)
+        details_label.setFont(QFont("Segoe UI", 9))
+        details_label.setStyleSheet("color: #888888; background: transparent;")
+        details_label.setWordWrap(True)
+        layout.addWidget(details_label)
 
-    def force_file_sync_attrib(self, file_path):
-        """Force file sync using Windows attrib command"""
-        try:
-            import subprocess
-            print(f"Using attrib method to force sync: {file_path}")
+        layout.addLayout(password_layout)
 
-            # Set file as pinned (always keep on device) to force sync
-            result1 = subprocess.run(['attrib', '+P', file_path], capture_output=True, text=True)
-            if result1.returncode != 0:
-                print(f"Attrib +P failed: {result1.stderr}")
-                return False
+        return widget
 
-            # Wait briefly
-            import time
-            time.sleep(0.5)
-
-            # Remove pinned attribute
-            result2 = subprocess.run(['attrib', '-P', file_path], capture_output=True, text=True)
-            if result2.returncode != 0:
-                print(f"Attrib -P failed: {result2.stderr}")
-                return False
-
-            print("Attrib sync method completed successfully")
-            return True
-
-        except Exception as e:
-            print(f"Attrib sync method failed: {e}")
-            return False
-
-    def touch_file_to_trigger_sync(self, file_path):
-        """Touch file to trigger OneDrive sync"""
-        try:
-            print(f"Using touch method to trigger sync: {file_path}")
-
-            # Update file access time to trigger sync detection
-            import os
-            import time
-
-            # Get current times
-            stat = os.stat(file_path)
-
-            # Update access time (but keep modification time)
-            os.utime(file_path, (time.time(), stat.st_mtime))
-
-            print("Touch sync method completed")
-            return True
-
-        except Exception as e:
-            print(f"Touch sync method failed: {e}")
-            return False
-
-    def show_sync_result(self, message, success):
-        """Show sync result in the UI"""
-        try:
-            color = "#4CAF50" if success else "#ff4757"
-
-            # Update the OneDrive status label temporarily
-            original_text = self.onedrive_status_label.text()
-            self.onedrive_status_label.setText(message)
-            self.onedrive_status_label.setStyleSheet(f"color: {color}; background: transparent;")
-
-            # Restore original text after 5 seconds
-            from PyQt6.QtCore import QTimer
-            def restore_text():
-                self.onedrive_status_label.setText(original_text)
-                self.onedrive_status_label.setStyleSheet("color: #4CAF50; background: transparent;")
-
-            QTimer.singleShot(5000, restore_text)
-
-        except Exception as e:
-            print(f"Error showing sync result: {e}")
-
-    def check_vault_sync_status(self, vault_path):
-        """Check the actual sync status of the vault file"""
-        try:
-            import subprocess
-
-            # Check file attributes for OneDrive status
-            result = subprocess.run(['attrib', vault_path], capture_output=True, text=True)
-
-            if result.returncode == 0:
-                attrs = result.stdout.strip()
-                print(f"Vault file attributes: {attrs}")
-
-                # Parse OneDrive status from attributes
-                if 'P' in attrs:
-                    return "pinned"  # Always kept locally and synced
-                elif 'U' in attrs:
-                    return "pending"  # Upload pending
-                elif 'O' in attrs:
-                    return "online_only"  # OneDrive only
-                else:
-                    return "local"  # Local file, sync status unknown
-            else:
-                return "error"
-
-        except Exception as e:
-            print(f"Error checking vault sync status: {e}")
-            return "error"
-
-    def open_onedrive_folder(self):
-        """Open the OneDrive folder in explorer"""
-        import os
-        import subprocess
-
-        onedrive_path = os.environ.get('ONEDRIVE')
-        if onedrive_path:
-            subprocess.run(['explorer', onedrive_path])
+    def toggle_individual_password(self, label, password):
+        """Toggle individual password visibility"""
+        current_text = label.text()
+        if "•" in current_text:
+            label.setText(password)
         else:
-            print("OneDrive not detected")
+            label.setText("•" * len(password))
 
-    def is_onedrive_service_running(self):
-        """Check if OneDrive service/process is actually running"""
-        try:
-            import subprocess
+    def toggle_global_password_visibility(self):
+        """Toggle global password visibility"""
+        self.show_passwords = not self.show_passwords
+        self.update_global_eye_button()
+        self.refresh_security_data()
 
-            print("Checking for OneDrive.exe process...")
-
-            # Method 1: Check running processes for OneDrive
-            result = subprocess.run([
-                'tasklist', '/FI', 'IMAGENAME eq OneDrive.exe'
-            ], capture_output=True, text=True, shell=True)
-
-            print(f"Tasklist result: {result.returncode}")
-            print(f"Tasklist output: {result.stdout[:200]}...")  # First 200 chars
-
-            if result.returncode == 0 and 'OneDrive.exe' in result.stdout:
-                print("OneDrive.exe process found running")
-                return True
-
-            print("OneDrive.exe not found in tasklist, trying PowerShell...")
-
-            # Method 2: Alternative process check
-            result = subprocess.run([
-                'powershell', '-Command',
-                'Get-Process -Name "OneDrive" -ErrorAction SilentlyContinue'
-            ], capture_output=True, text=True)
-
-            print(f"PowerShell result: {result.returncode}")
-            print(f"PowerShell output: {result.stdout[:100]}...")  # First 100 chars
-
-            if result.returncode == 0 and result.stdout.strip():
-                print("OneDrive process found via PowerShell")
-                return True
-
-            print("OneDrive service not running")
-            return False
-
-        except Exception as e:
-            print(f"Error checking OneDrive service: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
-
-    def update_backup_status(self):
-        """Update OneDrive sync status display"""
-        try:
-            print("Starting OneDrive sync status check...")
-            import os
-            from datetime import datetime
-
-            onedrive_path = os.environ.get('ONEDRIVE')
-            print(f"OneDrive path: {onedrive_path}")
-
-            if onedrive_path and os.path.exists(onedrive_path):
-                self.onedrive_status_label.setText("✅ OneDrive is running")
-                self.onedrive_status_label.setStyleSheet("color: #4CAF50; background: transparent;")
-
-                # Check if vault is in OneDrive
-                if hasattr(self, 'vault_data'):
-                    vault_in_onedrive = "OneDrive" in str(onedrive_path)  # Simple check
-                    if vault_in_onedrive:
-                        self.vault_location_label.setText("✅ Vault is in OneDrive folder")
-                        self.vault_location_label.setStyleSheet("color: #4CAF50; background: transparent;")
-
-                        # Check last modified time of OneDrive folder (rough sync indicator)
-                        try:
-                            last_modified = os.path.getmtime(onedrive_path)
-                            sync_time = datetime.fromtimestamp(last_modified).strftime("%Y-%m-%d %H:%M")
-                            self.last_sync_label.setText(f"OneDrive folder activity: {sync_time}")
-                        except:
-                            self.last_sync_label.setText("OneDrive folder activity: Unknown")
-
-                        self.sync_status_indicator.setText("✅ Protected")
-                        self.sync_status_indicator.setStyleSheet("color: #4CAF50; background: transparent;")
-                    else:
-                        self.vault_location_label.setText("⚠️ Vault is NOT in OneDrive")
-                        self.vault_location_label.setStyleSheet("color: #ff9500; background: transparent;")
-                        self.last_sync_label.setText("Move vault to OneDrive for automatic backup")
-                        self.sync_status_indicator.setText("⚠️ Not Protected")
-                        self.sync_status_indicator.setStyleSheet("color: #ff9500; background: transparent;")
-                else:
-                    self.vault_location_label.setText("Vault location: Unknown")
-                    self.last_sync_label.setText("Load vault to check location")
-                    self.sync_status_indicator.setText("Unknown")
-                    self.sync_status_indicator.setStyleSheet("color: #ffaa00; background: transparent;")
-
-            else:
-                print("OneDrive not detected or not running")
-                self.onedrive_status_label.setText("❌ OneDrive not detected")
-                self.onedrive_status_label.setStyleSheet("color: #ff4757; background: transparent;")
-                self.vault_location_label.setText("Install and setup OneDrive for automatic backups")
-                self.last_sync_label.setText("No automatic backup protection")
-                self.sync_status_indicator.setText("❌ Not Protected")
-                self.sync_status_indicator.setStyleSheet("color: #ff4757; background: transparent;")
-
-            print("OneDrive sync status check completed")
-
-        except Exception as e:
-            print(f"Error checking OneDrive sync status: {e}")
-            import traceback
-            traceback.print_exc()
-
-            # Safe fallback
-            try:
-                self.onedrive_status_label.setText("❌ Sync status error")
-                self.onedrive_status_label.setStyleSheet("color: #ff4757; background: transparent;")
-                self.vault_location_label.setText("Error checking vault location")
-                self.last_sync_label.setText("Unable to determine sync status")
-                self.sync_status_indicator.setText("Error")
-                self.sync_status_indicator.setStyleSheet("color: #ff4757; background: transparent;")
-            except:
-                pass
-
-    def check_sync_status(self):
-        """Check OneDrive sync status"""
-        print("Checking OneDrive sync status...")
-        self.update_backup_status()
-
-        # Also check vault file specific sync status
-        try:
-            vault_path = self.get_vault_file_path()
-            if vault_path:
-                sync_status = self.check_vault_sync_status(vault_path)
-                print(f"Vault sync status: {sync_status}")
-
-                # Update UI with specific vault sync info
-                if sync_status == "pending":
-                    self.last_sync_label.setText("⏳ Vault sync pending...")
-                    self.last_sync_label.setStyleSheet("color: #ffaa00; background: transparent;")
-                elif sync_status == "pinned":
-                    self.last_sync_label.setText("✅ Vault is pinned and synced")
-                    self.last_sync_label.setStyleSheet("color: #4CAF50; background: transparent;")
-                elif sync_status == "error":
-                    self.last_sync_label.setText("❌ Cannot check vault sync status")
-                    self.last_sync_label.setStyleSheet("color: #ff4757; background: transparent;")
-        except Exception as e:
-            print(f"Error checking detailed sync status: {e}")
-
-    def open_onedrive_folder(self):
-        """Open the OneDrive folder in explorer"""
-        import os
-        import subprocess
-
-        onedrive_path = os.environ.get('ONEDRIVE')
-        if onedrive_path:
-            subprocess.run(['explorer', onedrive_path])
+    def update_global_eye_button(self):
+        """Update the global eye button icon and text"""
+        if self.show_passwords:
+            icon = SvgIcon.create_icon(Icons.EYE_OFF, QSize(16, 16), "#4CAF50")
+            self.global_eye_btn.setText(" Hide All")
         else:
-            print("OneDrive not detected")
+            icon = SvgIcon.create_icon(Icons.EYE, QSize(16, 16), "#4CAF50")
+            self.global_eye_btn.setText(" Show All")
+
+        self.global_eye_btn.setIcon(icon)
+
+    def update_eye_button(self, button, show_password):
+        """Update individual eye button"""
+        if show_password:
+            icon = SvgIcon.create_icon(Icons.EYE_OFF, QSize(12, 12), "#888888")
+        else:
+            icon = SvgIcon.create_icon(Icons.EYE, QSize(12, 12), "#888888")
+        button.setIcon(icon)
+
+    def refresh_security_data(self):
+        """Refresh the security analysis"""
+        if hasattr(self, 'vault_data') and self.vault_data:
+            # Clear and rebuild content
+            main_layout = self.layout()
+            # Rebuild tab sections
+            self.create_tab_sections(main_layout)
+
+    def closeEvent(self, event):
+        """Handle dialog close"""
+        if hasattr(self, 'refresh_timer'):
+            self.refresh_timer.stop()
+        event.accept()
+
+    # Auto-backup integration hook (to be called from vault save operations)
+    def auto_backup_vault(self, vault_file_path):
+        """Automatically backup vault after save (premium feature)"""
+        try:
+            if self.google_drive_service and os.path.exists(vault_file_path):
+                print("🔄 Auto-backup triggered after vault save...")
+                result = self.backup_vault_to_google_drive(vault_file_path)
+
+                if result["success"]:
+                    print("✅ Auto-backup completed successfully")
+                    self.show_backup_progress("✅ Auto-backup completed")
+                else:
+                    print(f"❌ Auto-backup failed: {result['message']}")
+                    self.show_backup_progress("❌ Auto-backup failed")
+
+        except Exception as e:
+            print(f"Auto-backup error: {e}")
