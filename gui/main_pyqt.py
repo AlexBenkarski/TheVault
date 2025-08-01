@@ -550,6 +550,11 @@ class TheVaultApp(QMainWindow):
 
     def switch_to_tab_view(self, widget):
         """Switch to a specific tab view"""
+        # If switching to security dashboard, pass current vault data
+        if hasattr(self, 'security_dashboard') and widget == self.security_dashboard:
+            if hasattr(self, 'vault_window') and hasattr(self.vault_window, 'vault_data'):
+                self.security_dashboard.load_vault_data(self.vault_window.vault_data)
+
         self.stacked_widget.setCurrentWidget(widget)
 
     def _create_vault_controls(self, title_layout):
