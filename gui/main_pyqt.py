@@ -21,8 +21,7 @@ from PyQt6.QtWidgets import QSystemTrayIcon
 from game_integration.tray_bridge import GameIntegrationBridge
 from game_integration.background_monitor.epic_detector import EpicDetector
 from gui.widgets.svg_icons import SvgIcon, Icons
-
-
+from discord_presence import DiscordPresence
 
 
 class TheVaultApp(QMainWindow):
@@ -51,6 +50,8 @@ class TheVaultApp(QMainWindow):
 
         # Start monitoring after basic init
         self.start_game_monitoring()
+        self.discord = DiscordPresence()
+        self.discord.connect()
 
         self.drag_position = None
 
@@ -528,12 +529,28 @@ class TheVaultApp(QMainWindow):
 
             nav_layout.addWidget(tab)
 
+            if text == "Vault":
+                tab.clicked.connect(lambda: self.switch_to_tab_view(self.vault_window))
+            elif text == "Security":
+                tab.clicked.connect(lambda: self.switch_to_tab_view(self.security_dashboard))
+            elif text == "Friends":
+                tab.clicked.connect(lambda: self.switch_to_tab_view(self.friends_window))
+            elif text == "Notes":
+                tab.clicked.connect(lambda: self.switch_to_tab_view(self.notes_window))
+            elif text == "Bugs":
+                tab.clicked.connect(self.show_bug_report_dialog)
+
+            nav_layout.addWidget(tab)
+
         self.nav_tabs.show()
         title_layout.addWidget(self.nav_tabs)
 
         # Add stretch after tabs to center them
         title_layout.addStretch()
 
+    def switch_to_tab_view(self, widget):
+        """Switch to a specific tab view"""
+        self.stacked_widget.setCurrentWidget(widget)
 
     def _create_vault_controls(self, title_layout):
         self.vault_controls = QWidget()
@@ -668,8 +685,18 @@ class TheVaultApp(QMainWindow):
         # Create vault window
         self.vault_window = VaultWindow()
 
+        # CREATE NEW TAB VIEWS
+        from gui.windows.security_dashboard import SecurityDashboard
+        from gui.windows.friends_window import FriendsWindow
+        from gui.windows.notes_window import NotesWindow
+
+        self.security_dashboard = SecurityDashboard()
+        self.friends_window = FriendsWindow()
+        self.notes_window = NotesWindow()
+
         # Add all windows to stack
-        for window in [self.login_window, self.signup_window, self.recovery_window, self.vault_window]:
+        for window in [self.login_window, self.signup_window, self.recovery_window,
+                       self.vault_window, self.security_dashboard, self.friends_window, self.notes_window]:
             self.stacked_widget.addWidget(window)
 
     def _setup_startup_tasks(self):
@@ -1234,6 +1261,8 @@ class TheVaultApp(QMainWindow):
             if hasattr(self, 'epic_detector'):
                 self.epic_detector.stop_monitoring()
             event.accept()
+            if hasattr(self, 'discord'):
+                self.discord.disconnect()
 
 
 # =============================================================================
