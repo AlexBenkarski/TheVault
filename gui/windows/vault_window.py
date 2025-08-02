@@ -185,7 +185,6 @@ class VaultWindow(QWidget):
         return section
 
     def create_folder_list_item(self, folder_name, password_count, is_selected=False):
-        print(f"Creating folder item: {folder_name}, selected: {is_selected}")
         item_container = QWidget()
         item_container.setFixedHeight(50)
         item_container.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -200,7 +199,6 @@ class VaultWindow(QWidget):
                 }
             """)
         else:
-            print(f"APPLYING DEFAULT STYLE to {folder_name}")
             item_container.setStyleSheet("""
                 QWidget {
                     background: transparent;
